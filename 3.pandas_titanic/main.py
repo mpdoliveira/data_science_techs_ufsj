@@ -38,3 +38,22 @@ print(f"\nCrianças: {len(crianca_viva) / len(crianca):.2%}")
 print(f"Jovens: {len(jovem_vivo) / len(jovem):.2%}")
 print(f"Adultos: {len(adulto_vivo) / len(adulto):.2%}")
 print(f"Idosos: {len(idoso_vivo) / len(idoso):.2%}")
+
+sobreviventes = df[df['Survived'] == 1]
+nao_sobreviventes = df[df['Survived'] == 0]
+
+print("\n\n- Tarifa por sobrevivência:")
+
+print(f"\nSobreviventes:")
+print(f"Média: {sobreviventes['Fare'].mean():.2f}")
+print(f"Variância: {sobreviventes['Fare'].var():.2f}")
+print(f"Desvio padrão: {sobreviventes['Fare'].std():.2f}")
+
+print(f"\nNão sobreviventes:")
+print(f"Média: {nao_sobreviventes['Fare'].mean():.2f}")
+print(f"Variância: {nao_sobreviventes['Fare'].var():.2f}")
+print(f"Desvio padrão: {nao_sobreviventes['Fare'].std():.2f}")
+
+correlacao = df['Fare'].corr(df['Survived'])
+
+print(f"\nCorrelação entre tarifa e sobrevivência: {correlacao:.2f}")
