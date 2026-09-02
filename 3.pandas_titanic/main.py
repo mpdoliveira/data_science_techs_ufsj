@@ -57,3 +57,46 @@ print(f"Desvio padrão: {nao_sobreviventes['Fare'].std():.2f}")
 correlacao = df['Fare'].corr(df['Survived'])
 
 print(f"\nCorrelação entre tarifa e sobrevivência: {correlacao:.2f}")
+
+
+
+import matplotlib.pyplot as plt
+
+
+df.boxplot(column='Age', by=['Sex', 'Pclass'])
+
+plt.title('Distribuição de Idade por Gênero e Classe Social')
+plt.suptitle('')
+plt.xlabel('Gênero e Classe Social')
+plt.ylabel('Idade')
+plt.show()
+
+
+# Taxa de sobrevivência por faixa etária
+faixas = ['Crianças', 'Jovens', 'Adultos', 'Idosos']
+taxas = [
+    len(crianca_viva) / len(crianca),
+    len(jovem_vivo) / len(jovem),
+    len(adulto_vivo) / len(adulto),
+    len(idoso_vivo) / len(idoso)
+]
+
+plt.bar(faixas, taxas)
+
+plt.title('Taxa de Sobrevivência por Faixa Etária')
+plt.xlabel('Faixa Etária')
+plt.ylabel('Taxa de Sobrevivência')
+plt.ylim(0, 1)
+plt.show()
+
+
+# Tarifa por sobrevivência
+plt.boxplot(
+    [nao_sobreviventes['Fare'], sobreviventes['Fare']],
+    tick_labels=['Não sobreviventes', 'Sobreviventes']
+)
+
+plt.title('Distribuição da Tarifa por Sobrevivência')
+plt.xlabel('Sobrevivência')
+plt.ylabel('Tarifa')
+plt.show()
