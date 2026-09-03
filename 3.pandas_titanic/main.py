@@ -59,7 +59,6 @@ correlacao = df['Fare'].corr(df['Survived'])
 print(f"\nCorrelação entre tarifa e sobrevivência: {correlacao:.2f}")
 
 
-
 import matplotlib.pyplot as plt
 
 
