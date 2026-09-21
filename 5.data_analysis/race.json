@@ -1,0 +1,24 @@
+{
+    "race_labels" : {
+        "1" : "Branca",
+        "2" : "Preta",
+        "3" : "Amarela",
+        "4" : "Parda",
+        "5" : "Indígena"
+    },
+
+    "age_groups" : {
+        "delimiters" : [0, 12, 19, 29, 59, 130],
+        "labels" : [
+            "crianças (12-)",
+            "adolescentes (13-19)",
+            "jovem adultos (20-29",
+            "adultos (30-59)",
+            "idosos (60+"
+        ]
+    },
+    "sex_labels" : {
+        "1" : "Masculino",
+        "2" : "Feminino"
+    }
+}
