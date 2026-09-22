@@ -20,5 +20,15 @@
     "sex_labels" : {
         "1" : "Masculino",
         "2" : "Feminino"
+    },
+    "wealth_groups" : {
+        "delimiters" : [0, 109, 218, 810, 1620, 3240],
+        "labels" :[
+            "até 109",
+            "109 à 218",
+            "218 à 1/2 mínino",
+            "1/2 à 1 mínimo",
+            "1 à 2 mínimo"
+        ]
     }
 }
