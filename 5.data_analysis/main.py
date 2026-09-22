@@ -73,13 +73,14 @@ def work_age_group(path=PATH, year=date.today().year):
     df.dropna(inplace=True)
 
     with open("label.json", encoding="utf-8") as file:
-        config = json.load(file)
-        df["DT_NASC_PESSOA"] = pandas.to_datetime(df["DT_NASC_PESSOA"])
+        config = json.load(file)["age_groups"]
+
+    df["DT_NASC_PESSOA"] = pandas.to_datetime(df["DT_NASC_PESSOA"])
 
     df["age_groups"] = pandas.cut(
         year - df["DT_NASC_PESSOA"].dt.year,
-        bins=config["age_groups"]["delimiters"],
-        labels=config["age_groups"]["labels"],
+        bins=config["delimiters"],
+        labels=config["labels"],
         include_lowest=True
     )
 
@@ -87,9 +88,40 @@ def work_age_group(path=PATH, year=date.today().year):
 
     print(df.groupby(["age_groups","works"])["age_groups"].value_counts())
 
+def pcd_wealth(path=PATH):
+    data = pandas.read_csv(
+        PATH,
+        delimiter=";",
+        nrows=1000,
+        usecols=[
+            "CO_DEFICIENCIA_MEMB",
+            "VL_RENDA_BRUTA_12_MESES_MEMB"
+        ]
+    )
+
+    df = pandas.DataFrame(data)
+
+
+    with open("label.json", encoding="utf-8") as file:
+        config = json.load(file)["wealth_groups"]
+        config["delimiters"] = [n * 12 for n in config["delimiters"]]
+
+    df["wealth_range"] = pandas.cut(
+        df["VL_RENDA_BRUTA_12_MESES_MEMB"],
+        bins=config["delimiters"],
+        labels=config["labels"],
+        include_lowest=True
+    )
+
+    print(df.groupby(["wealth_range", "CO_DEFICIENCIA_MEMB"])["wealth_range"].size())
+
+
+
     
+
 
 if __name__ == '__main__':
     #sex_race_age(year=2018)
     #work_type()
-    work_age_group(year=2018)
+    #work_age_group(year=2018)
+    pcd_wealth()
