@@ -8,14 +8,13 @@
     },
 
     "age_groups" : {
-        "delimiters" : [0, 12, 18, 30, 45, 60, 130],
+        "delimiters" : [0, 12, 19, 29, 60, 130],
         "labels" : [
-            "0 À 12",
-            "13 à 18",
-            "19 à 30",
-            "31 à 45",
-            "46 à 60",
-            "60+"
+            "criança",
+            "adolescente",
+            "joven",
+            "adulto",
+            "idoso"
         ]
     },
     "sex_labels" : {
