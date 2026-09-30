@@ -27,6 +27,13 @@ def get_course_labels():
         return json.load(file)["course_labels"]
 
 
+def get_income_labels():
+    import json
+
+    with open("labels.json", encoding="utf-8") as file:
+        return json.load(file)["income_labels"]
+
+
 def start_session():
     return (
         SparkSession.builder.appName("Análise Cadastro Único")
@@ -55,20 +62,20 @@ def start_df():
         encoding="utf-8",
     )
 
+
+def spark_bucketizer(df, dict, inputCol, outputCol="grouped"):
+    return Bucketizer(
+        splits=dict["delimiters"], inputCol=inputCol, outputCol=outputCol
+    ).transform(df)
+
+
 def spark_map(dict):
     return F.create_map(
-        *[
-            item
-            for key, value in dict.items()
-            for item in (F.lit(key), F.lit(value))
-        ]
+        *[item for key, value in dict.items() for item in (F.lit(key), F.lit(value))]
     )
 
 
-def age_statistics(df, col_labels=get_column_labels()):
-    if not df:
-        df = start_df()
-
+def age_statistics(df=start_df(), col_labels=get_column_labels()):
     moddf = calculate_age(df)
 
     moddf = moddf.dropna(subset=col_labels["race_color"])
@@ -80,9 +87,7 @@ def age_statistics(df, col_labels=get_column_labels()):
     ).show()
 
 
-def income_education_statistics(
-    df, col_labels=get_column_labels()
-):
+def income_education_statistics(df, col_labels=get_column_labels()):
     if not df:
         df = start_df()
 
@@ -109,40 +114,74 @@ def income_education_statistics(
     ).show()
 
 
-def working_age_statistics(df=None, col_labels=get_column_labels()):
-    if not df:
-        df = start_df()
-
-    age_groups = get_age_labels()
+def working_age_statistics(df=start_df(), col_labels=get_column_labels()):
 
     moddf = df.dropna(subset=col_labels["employment_income"])
 
     moddf = calculate_age(moddf)
 
-    bucketizer = Bucketizer(
-        splits=age_groups["delimiters"], inputCol="age", outputCol="age_group"
-    )
-
-    moddf = bucketizer.transform(moddf)
+    moddf = spark_bucketizer(moddf, get_age_labels(), "age", "age_group")
 
     moddf = moddf.withColumn(
         "working",
         F.when(F.col(col_labels["employment_income"]) == 0, "0").otherwise("1"),
     )
 
-    moddf = (
-        moddf.groupBy("working")
-        .count()
-        .withColumn(
-            "Porcentagem",
-            F.round(
-                F.col("count") / F.sum("count").over(Window.partitionBy()) * 100, 2
-            ),
-        )
+    moddf = moddf.groupBy("working").count()
+
+    moddf = moddf.withColumn(
+        "Porcentagem",
+        F.round(F.col("count") / F.sum("count").over(Window.partitionBy()) * 100, 2),
     )
 
     moddf.select("Porcentagem").show()
 
 
+def disabled_family_income(df=start_df(), col_labels=get_column_labels()):
+
+    moddf = df.dropna(
+        subset=[col_labels["gross_year_income"], col_labels["disability"]]
+    )
+
+    moddf = moddf.groupBy(col_labels["family_code"]).agg(
+        F.sum(col_labels["gross_year_income"]).alias("family_year_income"),
+        F.count("*").alias("family_members"),
+        F.sum(F.when(F.col(col_labels["disability"]) == 1, 1).otherwise(0)).alias(
+            "disabled_members"
+        ),
+    )
+
+    moddf = moddf.withColumn(
+        "per_capta_income", F.col("family_year_income") / F.col("family_members") / 12
+    )
+
+    income_labels = get_income_labels()
+    moddf = spark_bucketizer(
+        moddf, income_labels, "per_capta_income", "income_group"
+    )
+
+    moddf = moddf.groupBy("income_group").agg(
+        F.sum("disabled_members").alias("disabled"),
+        F.sum("family_members").alias("total")
+    )
+
+    moddf = moddf.withColumn(
+        "Porcentagem",
+        F.round(F.col("disabled") / F.col("total") * 100, 2)
+    )
+
+    income_map = spark_map(dict(enumerate(income_labels["labels"])))
+    moddf = moddf.withColumn(
+        "Faixa de Renda", income_map[F.col("income_group")] 
+    )
+
+    moddf.select("Faixa de Renda", "Porcentagem").show()
+
+
 if __name__ == "__main__":
     df = start_df()
+    col_labels = get_column_labels()
+    age_statistics(df, col_labels)
+    income_education_statistics(df, col_labels)
+    working_age_statistics(df, col_labels)
+    disabled_family_income(df, col_labels)
