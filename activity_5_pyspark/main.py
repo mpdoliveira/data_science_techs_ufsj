@@ -1,7 +1,6 @@
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 from pyspark.ml.feature import Bucketizer
-from pyspark.sql import DataFrame
 from pyspark.sql.window import Window
 
 REFERENCE_YEAR = 2018
@@ -10,21 +9,21 @@ REFERENCE_YEAR = 2018
 def get_column_labels():
     import json
 
-    with open("labels.json") as file:
+    with open("labels.json", encoding="utf-8") as file:
         return json.load(file)["column_labels"]
 
 
 def get_age_labels():
     import json
 
-    with open("labels.json") as file:
+    with open("labels.json", encoding="utf-8") as file:
         return json.load(file)["age_range_labels"]
 
 
 def get_course_labels():
     import json
 
-    with open("labels.json") as file:
+    with open("labels.json", encoding="utf-8") as file:
         return json.load(file)["course_labels"]
 
 
@@ -37,11 +36,13 @@ def start_session():
     )
 
 
-def calculate_age(df, labels=get_column_labels()):
+def calculate_age(df, col_labels=get_column_labels()):
     return (
-        df.dropna(subset=labels["birth_date"])
-        .withColumn(labels["birth_date"], F.to_date(labels["birth_date"]))
-        .withColumn("age", F.lit(REFERENCE_YEAR) - F.year(F.col(labels["birth_date"])))
+        df.dropna(subset=col_labels["birth_date"])
+        .withColumn(col_labels["birth_date"], F.to_date(col_labels["birth_date"]))
+        .withColumn(
+            "age", F.lit(REFERENCE_YEAR) - F.year(F.col(col_labels["birth_date"]))
+        )
     )
 
 
@@ -54,56 +55,67 @@ def start_df():
         encoding="utf-8",
     )
 
+def spark_map(dict):
+    return F.create_map(
+        *[
+            item
+            for key, value in dict.items()
+            for item in (F.lit(key), F.lit(value))
+        ]
+    )
 
-def age_statistics(df: DataFrame | None = None, labels=get_column_labels()):
+
+def age_statistics(df, col_labels=get_column_labels()):
     if not df:
         df = start_df()
 
     moddf = calculate_age(df)
 
-    moddf = moddf.dropna(subset=labels["race_color_code"])
+    moddf = moddf.dropna(subset=col_labels["race_color"])
 
-    moddf.groupBy(labels["sex_code"], labels["race_color_code"]).agg(
-        F.round(F.avg("age").alias("Média"), 2),
-        F.round(F.median("age").alias("Mediana"), 2),
-        F.round(F.stddev("age").alias("Desvio Padrão"), 2),
+    moddf.groupBy(col_labels["sex"], col_labels["race_color"]).agg(
+        F.round(F.avg("age"), 2).alias("Média"),
+        F.round(F.median("age"), 2).alias("Mediana"),
+        F.round(F.stddev("age"), 2).alias("Desvio Padrão"),
     ).show()
 
 
 def income_education_statistics(
-    df: DataFrame | None = None, labels=get_column_labels()
+    df, col_labels=get_column_labels()
 ):
     if not df:
         df = start_df()
 
     moddf = df.dropna(
         subset=[
-            labels["previous_course_code"],
-            labels["gross_income_last_12_months"],
-            labels["completed_course_indicator"],
+            col_labels["previous_course"],
+            col_labels["gross_year_income"],
+            col_labels["completed_previous_course"],
         ]
     )
 
     moddf = moddf.groupBy(
-        labels["completed_course_indicator"], labels["previous_course_code"]
+        col_labels["completed_previous_course"], col_labels["previous_course"]
     ).agg(
-        F.round(F.avg(labels["gross_income_last_12_months"]).alias("Média"), 2),
-        F.round(F.median(labels["gross_income_last_12_months"]).alias("Mediana"), 2),
-        F.round(
-            F.stddev(labels["gross_income_last_12_months"]).alias("Desvio Padrão"), 2
-        ),
+        F.round(F.avg(col_labels["gross_year_income"]), 2).alias("Média"),
+        F.round(F.median(col_labels["gross_year_income"]), 2).alias("Mediana"),
+        F.round(F.stddev(col_labels["gross_year_income"]), 2).alias("Desvio Padrão"),
     )
 
-    moddf.withColumn("course_label", F.col(labels[""]))
+    course_map = spark_map(get_course_labels())
+
+    moddf.withColumn(
+        "course_label", course_map[F.col(col_labels["previous_course"])]
+    ).show()
 
 
-def working_age_statistics(df=None, labels=get_column_labels()):
+def working_age_statistics(df=None, col_labels=get_column_labels()):
     if not df:
         df = start_df()
 
     age_groups = get_age_labels()
 
-    moddf = df.dropna(subset=labels["employment_income"])
+    moddf = df.dropna(subset=col_labels["employment_income"])
 
     moddf = calculate_age(moddf)
 
@@ -114,7 +126,8 @@ def working_age_statistics(df=None, labels=get_column_labels()):
     moddf = bucketizer.transform(moddf)
 
     moddf = moddf.withColumn(
-        "working", F.when(F.col(labels["employment_income"]) == 0, "0").otherwise("1")
+        "working",
+        F.when(F.col(col_labels["employment_income"]) == 0, "0").otherwise("1"),
     )
 
     moddf = (
@@ -133,6 +146,3 @@ def working_age_statistics(df=None, labels=get_column_labels()):
 
 if __name__ == "__main__":
     df = start_df()
-
-    labels = get_column_labels()
-    income_education_statistics(df, labels)
