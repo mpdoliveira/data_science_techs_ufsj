@@ -1,0 +1,40 @@
+{
+    "age_groups" : {
+        "delimiters" : [0, 12, 19, 29, 60, 130],
+        "labels" : [
+            "criança",
+            "adolescente",
+            "joven",
+            "adulto",
+            "idoso"
+        ]
+    },
+    "labels" : {
+        "ibge_municipality_code": "CD_IBGE_CADASTRO",
+        "family_code": "CO_FAMILIAR_FAM",
+        "bolsa_familia_flag": "MARC_PBF",
+        "person_natural_key": "CO_CHV_NATURAL_PESSOA",
+        "child_labor_indicator": "IN_TRABALHO_INFANTIL_PESSOA",
+        "sex_code": "CO_SEXO_PESSOA",
+        "birth_date": "DT_NASC_PESSOA",
+        "relationship_to_family_head_code": "CO_PARENTESCO_RF_PESSOA",
+        "race_color_code": "CO_RACA_COR_PESSOA",
+        "disability_code": "CO_DEFICIENCIA_MEMB",
+        "literacy_code": "CO_SABE_LER_ESCREVER_MEMB",
+        "school_attendance_indicator": "IN_FREQUENTA_ESCOLA_MEMB",
+        "current_course_code": "CO_CURSO_FREQUENTA_MEMB",
+        "current_school_year_code": "CO_ANO_SERIE_FREQUENTA_MEMB",
+        "previous_course_code": "CO_CURSO_FREQ_PESSOA_MEMB",
+        "previous_school_year_code": "CO_ANO_SERIE_FREQUENTOU_MEMB",
+        "completed_course_indicator": "CO_CONCLUIU_FREQUENTOU_MEMB",
+        "worked_last_week_code": "CO_TRABALHOU_SEMANA_MEMB",
+        "agricultural_work_code": "CO_AGRICULTURA_TRAB_MEMB",
+        "employment_income": "VL_REMUNER_EMPREGO_MEMB",
+        "gross_income_last_12_months": "VL_RENDA_BRUTA_12_MESES_MEMB",
+        "donation_income": "VL_RENDA_DOACAO_MEMB",
+        "retirement_income": "VL_RENDA_APOSENT_MEMB",
+        "unemployment_benefit_income": "VL_RENDA_SEGURO_DESEMP_MEMB",
+        "alimony_income": "VL_RENDA_PENSAO_ALIMEN_MEMB",
+        "other_income": "VL_RENDA_OUTRAS_MEMB"
+    }
+}
