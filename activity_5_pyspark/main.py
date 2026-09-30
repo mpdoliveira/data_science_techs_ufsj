@@ -2,6 +2,8 @@ from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 from pyspark.sql import DataFrame
 
+REFERENCE_YEAR = 2018
+
 
 def get_labels():
     import json
@@ -9,24 +11,27 @@ def get_labels():
     with open("labels.json") as file:
         return json.load(file)["labels"]
 
+def start_session():
+    return (
+        SparkSession.builder.appName("Análise Cadastro Único")
+        .master("local[*]")
+        .config("spark.log.level", "ERROR")
+        .getOrCreate()
+    )
 
-def age_statistics(df: DataFrame | None = None):
-    if not df:
-        REFERENCE_YEAR = 2018
-
-        spark = (
-            SparkSession.builder.appName("Análise Cadastro Único")
-            .master("local[*]")
-            .config("spark.log.level", "ERROR")
-            .getOrCreate()
-        )
-
-        df = spark.read.csv(
+def read_csv():
+    spark = start_session()
+    return spark.read.csv(
             "amostra.csv/*.csv",
             header=True,
             inferSchema=True,
             encoding="utf-8",
         )
+
+
+def age_statistics(df: DataFrame | None = None):
+    if not df:
+        df = read_csv()
 
     labels = get_labels()
     df = df.withColumn(labels["birth_date"], F.to_date(labels["birth_date"]))
