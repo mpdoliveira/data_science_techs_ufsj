@@ -5,7 +5,6 @@ from pyspark.sql.window import Window
 
 REFERENCE_YEAR = 2018
 
-
 def get_column_labels():
     import json
 
@@ -38,13 +37,6 @@ def get_income_labels():
 
     with open("labels.json", encoding="utf-8") as file:
         return json.load(file)["income_labels"]
-
-
-def get_sex_labels():
-    import json
-
-    with open("labels.json", encoding="utf-8") as file:
-        return json.load(file)["sex_labels"]
 
 
 def start_session():
@@ -105,7 +97,7 @@ def spark_bucketizer(df, config, input_col, output_col="grouped"):
         splits=config["delimiters"], inputCol=input_col, outputCol=output_index_col
     ).transform(df)
 
-    return spark_map(moddf, dict(enumerate(config["labels"])), input_col, output_col)
+    return spark_map(moddf, dict(enumerate(config["labels"])), output_index_col, output_col)
 
 
 def age_statistics(df=None, col_labels=None):
@@ -221,7 +213,6 @@ def working_age_statistics(df=None, col_labels=None):
     moddf = calculate_age(moddf)
 
     moddf = spark_bucketizer(moddf, get_age_labels(), "age", "age_group")
-    moddf.show()
 
     moddf = moddf.withColumn(
         "working",
@@ -279,7 +270,7 @@ def disabled_family_income(df=None, col_labels=None):
     )
 
     moddf = moddf.withColumn(
-        "Porcentagem", F.round(F.col("disabled") / F.col("total") * 100, 2)
+        "Porcentagem PCD", F.round(F.col("disabled") / F.col("total") * 100, 2)
     )
 
     return moddf.select(F.col("income_group").alias("Faixa de Renda"), "Porcentagem")
@@ -288,8 +279,8 @@ def disabled_family_income(df=None, col_labels=None):
 if __name__ == "__main__":
     df = start_df()
     col_labels = get_column_labels()
-    #age_statistics(df, col_labels).show()
-    #work_statistics(df, col_labels).show()
-    #income_education_statistics(df, col_labels).show()
+    age_statistics(df, col_labels).show()
+    work_statistics(df, col_labels).show()
+    income_education_statistics(df, col_labels).show()
     working_age_statistics(df, col_labels).show()
-    #disabled_family_income(df, col_labels).show()
+    disabled_family_income(df, col_labels).show()
