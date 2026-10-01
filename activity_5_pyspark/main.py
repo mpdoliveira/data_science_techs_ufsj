@@ -5,38 +5,11 @@ from pyspark.sql.window import Window
 
 REFERENCE_YEAR = 2018
 
-def get_column_labels():
-    import json
-
-    with open("labels.json", encoding="utf-8") as file:
-        return json.load(file)["column_labels"]
-
-
-def get_age_labels():
-    import json
-
-    with open("labels.json", encoding="utf-8") as file:
-        return json.load(file)["age_range_labels"]
-
-
 def get_labels(title):
     import json
 
     with open("labels.json", encoding="utf-8") as file:
         return json.load(file)[title]
-
-def get_course_labels():
-    import json
-
-    with open("labels.json", encoding="utf-8") as file:
-        return json.load(file)["course_labels"]
-
-
-def get_income_labels():
-    import json
-
-    with open("labels.json", encoding="utf-8") as file:
-        return json.load(file)["income_labels"]
 
 
 def start_session():
@@ -48,7 +21,7 @@ def start_session():
     )
 
 
-def calculate_age(df, col_labels=get_column_labels()):
+def calculate_age(df, col_labels=get_labels("column_labels")):
     return (
         df.dropna(subset=col_labels["birth_date"])
         .withColumn(col_labels["birth_date"], F.to_date(col_labels["birth_date"]))
@@ -105,7 +78,7 @@ def age_statistics(df=None, col_labels=None):
         df = start_df()
 
     if col_labels is None:
-        col_labels = get_column_labels()
+        col_labels = get_labels("column_labels")
 
     moddf = calculate_age(df)
 
@@ -120,7 +93,7 @@ def age_statistics(df=None, col_labels=None):
     moddf = spark_map(moddf, get_labels("sex_labels"), col_labels["sex"], "Sexo")
     moddf = spark_map(moddf, get_labels("race_labels"), col_labels["race_color"], "Cor/Raça")
 
-    moddf = moddf.orderBy(col_labels["sex"], col_labels["race_color"])
+    moddf = moddf.orderBy(col_labels["race_color"], col_labels["sex"])
 
     return moddf.select(
         "Cor/Raça",
@@ -136,7 +109,7 @@ def work_statistics(df=None, col_labels=None):
         df = start_df()
 
     if col_labels is None:
-        col_labels = get_column_labels()
+        col_labels = get_labels("column_labels")
 
     moddf = df.dropna(
         subset=[col_labels["gross_year_income"], col_labels["employment_income"]]
@@ -172,7 +145,7 @@ def income_education_statistics(df=None, col_labels=None):
         df = start_df()
 
     if col_labels is None:
-        col_labels = get_column_labels()
+        col_labels = get_labels("column_labels")
 
     moddf = df.dropna(
         subset=[
@@ -190,7 +163,7 @@ def income_education_statistics(df=None, col_labels=None):
         F.round(F.stddev(col_labels["gross_year_income"]), 2).alias("Desvio Padrão"),
     )
 
-    moddf = spark_map(moddf, get_course_labels(), col_labels["previous_course"], "Escolaridade")
+    moddf = spark_map(moddf, get_labels("course_labels"), col_labels["previous_course"], "Escolaridade")
 
     moddf = bool_map(moddf, col_labels["completed_previous_course"], "Concluiu")
 
@@ -206,13 +179,13 @@ def working_age_statistics(df=None, col_labels=None):
         df = start_df()
 
     if col_labels is None:
-        col_labels = get_column_labels()
+        col_labels = get_labels("column_labels")
 
     moddf = df.dropna(subset=col_labels["employment_income"])
 
     moddf = calculate_age(moddf)
 
-    moddf = spark_bucketizer(moddf, get_age_labels(), "age", "age_group")
+    moddf = spark_bucketizer(moddf, get_labels("age_range_labels"), "age", "age_group")
 
     moddf = moddf.withColumn(
         "working",
@@ -243,7 +216,7 @@ def disabled_family_income(df=None, col_labels=None):
         df = start_df()
 
     if col_labels is None:
-        col_labels = get_column_labels()
+        col_labels = get_labels("column_labels")
 
     moddf = df.dropna(subset=[col_labels["disability"]])
 
@@ -261,7 +234,7 @@ def disabled_family_income(df=None, col_labels=None):
         "per_capta_income", F.col("family_year_income") / F.col("family_members") / 12
     )
 
-    income_labels = get_income_labels()
+    income_labels = get_labels("income_labels")
     moddf = spark_bucketizer(moddf, income_labels, "per_capta_income", "income_group")
 
     moddf = moddf.groupBy("income_group").agg(
@@ -273,12 +246,12 @@ def disabled_family_income(df=None, col_labels=None):
         "Porcentagem PCD", F.round(F.col("disabled") / F.col("total") * 100, 2)
     )
 
-    return moddf.select(F.col("income_group").alias("Faixa de Renda"), "Porcentagem")
+    return moddf.select(F.col("income_group").alias("Faixa de Renda"), "Porcentagem PCD")
 
 
 if __name__ == "__main__":
     df = start_df()
-    col_labels = get_column_labels()
+    col_labels = get_labels("column_labels")
     age_statistics(df, col_labels).show()
     work_statistics(df, col_labels).show()
     income_education_statistics(df, col_labels).show()
