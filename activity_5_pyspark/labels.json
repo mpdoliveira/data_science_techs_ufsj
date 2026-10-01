@@ -1,5 +1,5 @@
 {
-    "age_groups" : {
+    "age_range_labels" : {
         "delimiters" : [0, 12, 19, 29, 60, 130],
         "labels" : [
             "criança",
@@ -9,28 +9,54 @@
             "idoso"
         ]
     },
-    "labels" : {
+    "course_labels": {
+        "1": "Creche",
+        "2": "Pré-escola",
+        "3": "Alfabetização",
+        "4": "Fundamental I",
+        "5": "Fundamental II",
+        "6": "Fundamental 9 anos",
+        "7": "Fundamental Especial",
+        "8": "Ensino Médio",
+        "9": "Médio Especial",
+        "10": "EJA Fundamental I",
+        "11": "EJA Fundamental II",
+        "12": "EJA Médio",
+        "13": "Superior",
+        "14": "Alfabetização Adultos",
+        "15": "Nenhum"
+    },
+    "income_labels" : {
+        "delimiters": [0, 109, 218, 477, 999999],
+        "labels": [
+        "até 109",
+        "109 à 218",
+        "218 à 1/2 salário mínimo",
+        "> 1/2 salário mínimo"
+        ]
+    },
+    "column_labels" : {
         "ibge_municipality_code": "CD_IBGE_CADASTRO",
         "family_code": "CO_FAMILIAR_FAM",
         "bolsa_familia_flag": "MARC_PBF",
         "person_natural_key": "CO_CHV_NATURAL_PESSOA",
         "child_labor_indicator": "IN_TRABALHO_INFANTIL_PESSOA",
-        "sex_code": "CO_SEXO_PESSOA",
+        "sex": "CO_SEXO_PESSOA",
         "birth_date": "DT_NASC_PESSOA",
         "relationship_to_family_head_code": "CO_PARENTESCO_RF_PESSOA",
-        "race_color_code": "CO_RACA_COR_PESSOA",
-        "disability_code": "CO_DEFICIENCIA_MEMB",
+        "race_color": "CO_RACA_COR_PESSOA",
+        "disability": "CO_DEFICIENCIA_MEMB",
         "literacy_code": "CO_SABE_LER_ESCREVER_MEMB",
         "school_attendance_indicator": "IN_FREQUENTA_ESCOLA_MEMB",
         "current_course_code": "CO_CURSO_FREQUENTA_MEMB",
         "current_school_year_code": "CO_ANO_SERIE_FREQUENTA_MEMB",
-        "previous_course_code": "CO_CURSO_FREQ_PESSOA_MEMB",
+        "previous_course": "CO_CURSO_FREQ_PESSOA_MEMB",
         "previous_school_year_code": "CO_ANO_SERIE_FREQUENTOU_MEMB",
-        "completed_course_indicator": "CO_CONCLUIU_FREQUENTOU_MEMB",
+        "completed_previous_course": "CO_CONCLUIU_FREQUENTOU_MEMB",
         "worked_last_week_code": "CO_TRABALHOU_SEMANA_MEMB",
         "agricultural_work_code": "CO_AGRICULTURA_TRAB_MEMB",
         "employment_income": "VL_REMUNER_EMPREGO_MEMB",
-        "gross_income_last_12_months": "VL_RENDA_BRUTA_12_MESES_MEMB",
+        "gross_year_income": "VL_RENDA_BRUTA_12_MESES_MEMB",
         "donation_income": "VL_RENDA_DOACAO_MEMB",
         "retirement_income": "VL_RENDA_APOSENT_MEMB",
         "unemployment_benefit_income": "VL_RENDA_SEGURO_DESEMP_MEMB",
