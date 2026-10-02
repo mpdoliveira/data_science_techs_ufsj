@@ -1,0 +1,17 @@
+Intro
+	Growth in the field Data Science.
+	Still, challenges on studies on the area (87% fail).
+		Common problems: lack of interpretability in complex modals and noisy data. 
+	Need to collaborate with specialists in the problem.
+	Cyclical structures (data lifecycle) KDD process.
+	Machine learning as a tool:
+		supervised
+		unsupervised
+		reinforced learning
+
+	Goal: not only answer the question but develop a DS moodel to deal with any problem.
+		A new Data Science model called ‘‘Data Refinement Cycle with Supervised Machine Learning (DRC–SML)’’
+		‘‘Planting and Harvesting Health (PHH)’
+
+
+Tech para ajudar o pessoal da coleta seletiva!

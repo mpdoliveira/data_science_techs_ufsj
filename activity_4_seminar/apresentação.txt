@@ -1,0 +1,10 @@
+informações gerais do artigo (autores, data e relevancia)
+objetivo
+contribuições (modelo e resultados)
+dados utilizados
+DRC-SML
+trainamento RST 
+validação 4-fold
+resultados
+discussão crítica
+conclusão (futuro)
