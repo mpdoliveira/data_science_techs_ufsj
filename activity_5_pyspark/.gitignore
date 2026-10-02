@@ -1,2 +1,3 @@
 .venv/
-amostra.csv
+*.csv
+*.txt
