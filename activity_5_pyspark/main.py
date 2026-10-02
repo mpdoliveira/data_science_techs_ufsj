@@ -5,6 +5,8 @@ from pyspark.sql.window import Window
 
 REFERENCE_YEAR = 2018
 
+# Helper functions
+
 
 def get_labels(title):
     import json
@@ -32,6 +34,28 @@ def start_df():
     )
 
 
+def spark_map(df, labels, input_col, output_col="mapped"):
+    map = F.create_map(
+        *[item for key, value in labels.items() for item in (F.lit(key), F.lit(value))]
+    )
+
+    return df.withColumn(output_col, map[F.col(input_col).cast("int")])
+
+
+def spark_bucketizer(df, config, input_col, output_col="grouped"):
+
+    # Categorize in buckets based on a config range and save on output_index_col
+    output_index_col = f"{output_col}_index"
+    moddf = Bucketizer(
+        splits=config["delimiters"], inputCol=input_col, outputCol=output_index_col
+    ).transform(df)
+
+    # Return dataframe with index and label columns
+    return spark_map(
+        moddf, dict(enumerate(config["labels"])), output_index_col, output_col
+    )
+
+
 def calculate_age(df, col_labels=get_labels("column_labels")):
     return (
         df.dropna(subset=col_labels["birth_date"])
@@ -43,26 +67,12 @@ def calculate_age(df, col_labels=get_labels("column_labels")):
     )
 
 
-def spark_map(df, labels, input_col, output_col="mapped"):
-    map = F.create_map(
-        *[item for key, value in labels.items() for item in (F.lit(key), F.lit(value))]
-    )
-
-    return df.withColumn(output_col, map[F.col(input_col).cast("int")])
+# Activity Tasts
+# Part 1 - Demographic analysis and labor market
 
 
-def spark_bucketizer(df, config, input_col, output_col="grouped"):
-
-    output_index_col = f"{output_col}_index"
-    moddf = Bucketizer(
-        splits=config["delimiters"], inputCol=input_col, outputCol=output_index_col
-    ).transform(df)
-
-    return spark_map(
-        moddf, dict(enumerate(config["labels"])), output_index_col, output_col
-    )
-
-
+# Part 1, task 1 - 1.1
+# Age distribution by sex and race/color combination
 def age_statistics(df=None, col_labels=None):
     if df is None:
         df = start_df()
@@ -90,6 +100,8 @@ def age_statistics(df=None, col_labels=None):
     return moddf.select("Cor/Raça", "Sexo", "Média", "Mediana", "Desvio Padrão")
 
 
+# Part 1, task 2 - 1.2
+# Percentage of formal labor vs informal (any income source that is not employment)
 def work_statistics(df=None, col_labels=None):
     if df is None:
         df = start_df()
@@ -128,6 +140,8 @@ def work_statistics(df=None, col_labels=None):
     return moddf.select("Trabalha formal", "Porcentagem")
 
 
+# Part 1, task 3 - 1.3
+# Average individual gross income by education level
 def income_education_statistics(df=None, col_labels=None):
     if df is None:
         df = start_df()
@@ -172,6 +186,11 @@ def income_education_statistics(df=None, col_labels=None):
     return moddf.select("Escolaridade", "Concluiu", "Média", "Mediana", "Desvio Padrão")
 
 
+# Part 2 - Working and education profile analysis
+
+
+# Part 2, task 1 - 2.1
+# Employed individuals by age group
 def working_age_statistics(df=None, col_labels=None):
     if df is None:
         df = start_df()
@@ -209,6 +228,8 @@ def working_age_statistics(df=None, col_labels=None):
     )
 
 
+# Part 2, task 2 - 2.2
+# Percentage of disabled members in each family range
 def disabled_family_income(df=None, col_labels=None):
     if df is None:
         df = start_df()
@@ -249,6 +270,7 @@ def disabled_family_income(df=None, col_labels=None):
     )
 
 
+# Run each analysis
 if __name__ == "__main__":
     df = start_df()
     col_labels = get_labels("column_labels")
