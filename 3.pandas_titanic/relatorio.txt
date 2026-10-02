@@ -1,1 +1,0 @@
-O principal desafio foi a adequamento com a biblioteca pandas e o melhor entendimento dos parametros da matplotlib
