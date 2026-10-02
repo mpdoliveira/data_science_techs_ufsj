@@ -9,6 +9,10 @@
             "idoso"
         ]
     },
+    "boolean_labels" : {
+      "1": "Sim",
+      "2": "Não"  
+    },
     "sex_labels" : {
         "1": "Homem",
         "2": "Mulher"

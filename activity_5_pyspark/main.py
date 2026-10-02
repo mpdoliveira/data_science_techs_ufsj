@@ -5,6 +5,7 @@ from pyspark.sql.window import Window
 
 REFERENCE_YEAR = 2018
 
+
 def get_labels(title):
     import json
 
@@ -21,6 +22,16 @@ def start_session():
     )
 
 
+def start_df():
+    spark = start_session()
+    return spark.read.csv(
+        "amostra.csv/*.csv",
+        header=True,
+        inferSchema=True,
+        encoding="utf-8",
+    )
+
+
 def calculate_age(df, col_labels=get_labels("column_labels")):
     return (
         df.dropna(subset=col_labels["birth_date"])
@@ -32,35 +43,12 @@ def calculate_age(df, col_labels=get_labels("column_labels")):
     )
 
 
-def start_df():
-    spark = start_session()
-    return spark.read.csv(
-        "amostra.csv/*.csv",
-        header=True,
-        inferSchema=True,
-        encoding="utf-8",
-    )
-
-
 def spark_map(df, labels, input_col, output_col="mapped"):
     map = F.create_map(
         *[item for key, value in labels.items() for item in (F.lit(key), F.lit(value))]
     )
 
     return df.withColumn(output_col, map[F.col(input_col).cast("int")])
-
-
-def bool_map(
-    df,
-    input_col,
-    output_col="bool_map",
-    true=1,
-    false=2,
-):
-    return df.withColumn(
-        output_col,
-        F.when(F.col(input_col) == true, "Sim").when(F.col(input_col) == false, "Não"),
-    )
 
 
 def spark_bucketizer(df, config, input_col, output_col="grouped"):
@@ -70,7 +58,9 @@ def spark_bucketizer(df, config, input_col, output_col="grouped"):
         splits=config["delimiters"], inputCol=input_col, outputCol=output_index_col
     ).transform(df)
 
-    return spark_map(moddf, dict(enumerate(config["labels"])), output_index_col, output_col)
+    return spark_map(
+        moddf, dict(enumerate(config["labels"])), output_index_col, output_col
+    )
 
 
 def age_statistics(df=None, col_labels=None):
@@ -91,17 +81,13 @@ def age_statistics(df=None, col_labels=None):
     )
 
     moddf = spark_map(moddf, get_labels("sex_labels"), col_labels["sex"], "Sexo")
-    moddf = spark_map(moddf, get_labels("race_labels"), col_labels["race_color"], "Cor/Raça")
+    moddf = spark_map(
+        moddf, get_labels("race_labels"), col_labels["race_color"], "Cor/Raça"
+    )
 
     moddf = moddf.orderBy(col_labels["race_color"], col_labels["sex"])
 
-    return moddf.select(
-        "Cor/Raça",
-        "Sexo",
-        "Média",
-        "Mediana",
-        "Desvio Padrão"
-    )
+    return moddf.select("Cor/Raça", "Sexo", "Média", "Mediana", "Desvio Padrão")
 
 
 def work_statistics(df=None, col_labels=None):
@@ -135,9 +121,11 @@ def work_statistics(df=None, col_labels=None):
         F.round(F.col("count") / F.sum("count").over(Window.partitionBy()) * 100, 2),
     )
 
-    moddf = bool_map(moddf, "formal_working", "Trabalho formal")
+    moddf = spark_map(
+        moddf, get_labels("boolean_labels"), "formal_working", "Trabalha formal"
+    )
 
-    return moddf.select("Trabalho formal", "Porcentagem")
+    return moddf.select("Trabalha formal", "Porcentagem")
 
 
 def income_education_statistics(df=None, col_labels=None):
@@ -163,9 +151,19 @@ def income_education_statistics(df=None, col_labels=None):
         F.round(F.stddev(col_labels["gross_year_income"]), 2).alias("Desvio Padrão"),
     )
 
-    moddf = spark_map(moddf, get_labels("course_labels"), col_labels["previous_course"], "Escolaridade")
+    moddf = spark_map(
+        moddf,
+        get_labels("course_labels"),
+        col_labels["previous_course"],
+        "Escolaridade",
+    )
 
-    moddf = bool_map(moddf, col_labels["completed_previous_course"], "Concluiu")
+    moddf = spark_map(
+        moddf,
+        get_labels("boolean_labels"),
+        col_labels["completed_previous_course"],
+        "Concluiu",
+    )
 
     moddf = moddf.orderBy(
         col_labels["previous_course"], col_labels["completed_previous_course"]
@@ -202,7 +200,7 @@ def working_age_statistics(df=None, col_labels=None):
         ),
     )
 
-    moddf = bool_map(moddf, "working", "Trabalha")
+    moddf = spark_map(moddf, get_labels("boolean_labels"), "working", "Trabalha")
 
     moddf = moddf.orderBy("age_group_index", "working")
 
@@ -246,7 +244,9 @@ def disabled_family_income(df=None, col_labels=None):
         "Porcentagem PCD", F.round(F.col("disabled") / F.col("total") * 100, 2)
     )
 
-    return moddf.select(F.col("income_group").alias("Faixa de Renda"), "Porcentagem PCD")
+    return moddf.select(
+        F.col("income_group").alias("Faixa de Renda"), "Porcentagem PCD"
+    )
 
 
 if __name__ == "__main__":
@@ -254,6 +254,6 @@ if __name__ == "__main__":
     col_labels = get_labels("column_labels")
     age_statistics(df, col_labels).show()
     work_statistics(df, col_labels).show()
-    income_education_statistics(df, col_labels).show()
+    income_education_statistics(df, col_labels).show(30)
     working_age_statistics(df, col_labels).show()
     disabled_family_income(df, col_labels).show()
