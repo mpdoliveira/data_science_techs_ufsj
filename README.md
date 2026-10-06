@@ -1,3 +1,4 @@
+[English](README.md) | [Português](README.pt-BR.md)
 # Data Science Technologies — UFSJ
 
 This repository contains projects developed for the **Data Science Technologies** elective course at the Federal University of São João del-Rei (UFSJ), taught by Prof. Carolina Xavier.
