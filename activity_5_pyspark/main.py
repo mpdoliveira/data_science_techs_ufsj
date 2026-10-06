@@ -30,7 +30,7 @@ def start_df():
     if len(sys.argv) > 1:
         path = sys.argv[1]
     else:
-        "amostra.csv/*.csv"
+        path = "amostra.csv/*.csv"
 
     if len(sys.argv) > 2:
         sep=sys.argv[2]
@@ -269,7 +269,7 @@ def disabled_family_income(df=None, col_labels=None):
     income_labels = get_labels("income_labels")
     moddf = spark_bucketizer(moddf, income_labels, "per_capta_income", "income_group")
 
-    moddf = moddf.groupBy("income_group").agg(
+    moddf = moddf.groupBy("income_group", "income_group_index").agg(
         F.sum("disabled_members").alias("disabled"),
         F.sum("family_members").alias("total"),
     )
@@ -277,6 +277,8 @@ def disabled_family_income(df=None, col_labels=None):
     moddf = moddf.withColumn(
         "Porcentagem PCD", F.round(F.col("disabled") / F.col("total") * 100, 2)
     )
+
+    moddf = moddf.orderBy("income_group_index")
 
     return moddf.select(
         F.col("income_group").alias("Faixa de Renda"), "Porcentagem PCD"
