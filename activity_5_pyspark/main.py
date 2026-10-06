@@ -25,12 +25,25 @@ def start_session():
 
 
 def start_df():
+    import sys
+
+    if len(sys.argv) > 1:
+        path = sys.argv[1]
+    else:
+        "amostra.csv/*.csv"
+
+    if len(sys.argv) > 2:
+        sep=sys.argv[2]
+    else:
+        sep=','
+    
     spark = start_session()
     return spark.read.csv(
-        "amostra.csv/*.csv",
+        path,
         header=True,
         inferSchema=True,
         encoding="utf-8",
+        sep=sep
     )
 
 
