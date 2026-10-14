@@ -5,7 +5,6 @@ from helper import start_df, get_labels
 # Activity Tasts
 # Part 1 - Demographic analysis and labor market
 
-
 # Part 1, task 1 - 1.1
 # Age distribution by sex and race/color combination
 def age_statistics(df=None, col_labels=None):
@@ -41,7 +40,7 @@ def age_statistics(df=None, col_labels=None):
 # Part 1, task 2 - 1.2
 # Percentage of formal labor vs informal (any income source that is not employment)
 def work_statistics(df=None, col_labels=None):
-    from helper import calculate_age, spark_map
+    from helper import calculate_age, spark_map, calculate_formal_work
     from pyspark.sql.window import Window
 
     if df is None:
@@ -50,24 +49,13 @@ def work_statistics(df=None, col_labels=None):
     if col_labels is None:
         col_labels = get_labels("column_labels")
 
-    moddf = df.dropna(
-        subset=[col_labels["gross_year_income"], col_labels["employment_income"]]
-    )
-
-    moddf = calculate_age(moddf, col_labels)
+    moddf = calculate_age(df, col_labels)
 
     moddf = moddf.filter(F.col("age").between(18, 65))
 
-    moddf = moddf.withColumn(
-        "formal_working",
-        F.when(
-            (F.col(col_labels["gross_year_income"]) != 0)
-            & (F.col(col_labels["employment_income"]) == 0),
-            2,
-        ).otherwise(1),
-    )
+    moddf = calculate_formal_work(moddf, col_labels)
 
-    moddf = moddf.groupBy("formal_working").count()
+    moddf = moddf.groupBy("formal_work").count()
 
     moddf = moddf.withColumn(
         "Porcentagem",
@@ -75,7 +63,7 @@ def work_statistics(df=None, col_labels=None):
     )
 
     moddf = spark_map(
-        moddf, get_labels("boolean_labels"), "formal_working", "Trabalha formal"
+        moddf, get_labels("boolean_labels"), "formal_work", "Trabalha formal"
     )
 
     return moddf.select("Trabalha formal", "Porcentagem")
