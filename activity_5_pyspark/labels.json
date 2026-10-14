@@ -41,6 +41,12 @@
         "14": "Alfabetização Adultos",
         "15": "Nenhum"
     },
+    "simplified_couse_labels": {
+        "0": "Nenhum",
+        "1": "Fundamental",
+        "2": "Médio",
+        "3": "Superior"
+    },
     "income_labels" : {
         "delimiters": [0, 109, 218, 477, 999999],
         "labels": [
