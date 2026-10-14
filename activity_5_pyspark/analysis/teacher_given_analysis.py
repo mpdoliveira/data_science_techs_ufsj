@@ -1,10 +1,10 @@
 from pyspark.sql import functions as F
 
-from helper import start_df, get_labels
+from helpers.helper import start_df, get_labels
 
 
 def income_race_sex(df=None, col_labels=None):
-    from helper import spark_map
+    from helpers.helper import spark_map
 
     if df is None:
         df = start_df()
@@ -38,7 +38,7 @@ def income_race_sex(df=None, col_labels=None):
 
 
 def education_formal_work(df=None, col_labels=None):
-    from helper import calculate_formal_work, spark_map
+    from helpers.helper import calculate_formal_work, spark_map
 
     if df is None:
         df = start_df()
@@ -83,7 +83,7 @@ def education_formal_work(df=None, col_labels=None):
 
 
 def disabled_age(df=None, col_labels=None):
-    from helper import calculate_age, spark_bucketizer
+    from helpers.helper import calculate_age, spark_bucketizer
     from pyspark.sql.window import Window
 
     if df is None:
@@ -170,7 +170,7 @@ def disabled_age(df=None, col_labels=None):
 
 
 def responsible_child_occupation(df=None, col_labels=None):
-    from helper import calculate_age, spark_map, calculate_formal_work
+    from helpers.helper import calculate_age, spark_map, calculate_formal_work
     from pyspark.sql.window import Window
 
     if df is None:

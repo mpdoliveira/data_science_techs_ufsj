@@ -6,8 +6,6 @@
 
 Este projeto analisa os **microdados públicos do Cadastro Único de 2018** utilizando **PySpark**. Foi desenvolvido como Atividade 5 da disciplina _Tecnologias para Ciência de Dados_ da Universidade Federal de São João del-Rei (UFSJ).
 
-A atividade original especificava o uso de Pandas. Esta implementação utiliza PySpark para processar tanto uma amostra quanto o conjunto de dados completo.
-
 ## Análises
 
 O projeto implementa as seguintes análises:
@@ -17,112 +15,6 @@ O projeto implementa as seguintes análises:
 3. Renda bruta anual por categoria de escolaridade e situação de conclusão.
 4. Trabalho remunerado por faixa etária.
 5. Proporção de pessoas com deficiência (PCD) por faixa de renda familiar per capita.
-
-## Tecnologias
-
-- Python
-- PySpark
-- Apache Spark
-- Spark SQL
-- Spark ML `Bucketizer`
-- Spark Window functions
-- Mapeamentos categóricos baseados em JSON
-
-## Estrutura do projeto
-
-```text
-activity_5_pyspark/
-├── main.py
-├── labels.json
-├── amostra.csv/
-└── README.md
-```
-
-O arquivo `labels.json` armazena os nomes das colunas do conjunto de dados, os mapeamentos categóricos e as definições de intervalos utilizadas nas análises.
-
-## Execução do projeto
-
-### Amostra
-
-```bash
-python main.py
-```
-
-Entrada padrão:
-
-```text
-amostra.csv/*.csv
-```
-
-### Conjunto de dados completo
-
-O arquivo completo `PESSOA_2018.TXT` utiliza `;` como delimitador:
-
-```bash
-python main.py "C:\caminho\para\PESSOA_2018.TXT" ";"
-```
-
-## Processamento dos dados
-
-### Idade
-
-A idade é aproximada a partir do ano de referência:
-
-```text
-idade = 2018 - ano de nascimento
-```
-
-Registros com idade calculada fora do intervalo `0–130` são excluídos.
-
-| Faixa etária | Intervalo |
-| ------------ | --------: |
-| Criança      |      0–12 |
-| Adolescente  |     13–19 |
-| Jovem        |     20–29 |
-| Adulto       |     30–59 |
-| Idoso        |    60–130 |
-
-### Variáveis categóricas
-
-Códigos numéricos são convertidos em rótulos descritivos por meio de expressões `map` do Spark e dos mapeamentos armazenados em `labels.json`.
-
-Exemplos:
-
-```text
-Sexo
-1 → Homem
-2 → Mulher
-```
-
-```text
-Cor/raça
-1 → Branca
-2 → Preta
-3 → Amarela
-4 → Parda
-5 → Indígena
-```
-
-### Renda familiar per capita
-
-A renda anual é agregada pelo identificador da família e convertida em uma estimativa de renda mensal familiar per capita:
-
-```text
-renda mensal familiar per capita = renda anual familiar / número de membros / 12
-```
-
-Faixas de renda utilizadas:
-
-| Grupo | Renda mensal familiar per capita |
-| ----- | -------------------------------: |
-| 1     |            R$ 0 ≤ renda < R$ 109 |
-| 2     |          R$ 109 ≤ renda < R$ 218 |
-| 3     |          R$ 218 ≤ renda < R$ 477 |
-| 4     |      R$ 477 ≤ renda < R$ 999.999 |
-
-R$ 477 corresponde à metade do salário mínimo de 2018 utilizado como referência nesta análise.
-
----
 
 # Resultados
 

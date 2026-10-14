@@ -1,6 +1,6 @@
 from pyspark.sql import functions as F
 
-from helper import start_df, get_labels
+from helpers.helper import start_df, get_labels
 
 # Activity Tasts
 # Part 1 - Demographic analysis and labor market
@@ -8,8 +8,8 @@ from helper import start_df, get_labels
 # Part 1, task 1 - 1.1
 # Age distribution by sex and race/color combination
 def age_statistics(df=None, col_labels=None):
-    from helper import calculate_age
-    from helper import spark_map
+    from helpers.helper import calculate_age
+    from helpers.helper import spark_map
 
     if df is None:
         df = start_df()
@@ -40,7 +40,7 @@ def age_statistics(df=None, col_labels=None):
 # Part 1, task 2 - 1.2
 # Percentage of formal labor vs informal (any income source that is not employment)
 def work_statistics(df=None, col_labels=None):
-    from helper import calculate_age, spark_map, calculate_formal_work
+    from helpers.helper import calculate_age, spark_map, calculate_formal_work
     from pyspark.sql.window import Window
 
     if df is None:
@@ -72,7 +72,7 @@ def work_statistics(df=None, col_labels=None):
 # Part 1, task 3 - 1.3
 # Average individual gross income by education level
 def income_education_statistics(df=None, col_labels=None):
-    from helper import spark_map
+    from helpers.helper import spark_map
 
     if df is None:
         df = start_df()
@@ -123,7 +123,7 @@ def income_education_statistics(df=None, col_labels=None):
 # Part 2, task 1 - 2.1
 # Employed individuals by age group
 def working_age_statistics(df=None, col_labels=None):
-    from helper import calculate_age, spark_bucketizer, spark_map
+    from helpers.helper import calculate_age, spark_bucketizer, spark_map
     from pyspark.sql.window import Window
 
     if df is None:
@@ -165,7 +165,7 @@ def working_age_statistics(df=None, col_labels=None):
 # Part 2, task 2 - 2.2
 # Percentage of disabled members in each family range
 def disabled_family_income(df=None, col_labels=None):
-    from helper import spark_bucketizer
+    from helpers.helper import spark_bucketizer
 
     if df is None:
         df = start_df()
