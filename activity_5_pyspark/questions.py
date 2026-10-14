@@ -185,3 +185,71 @@ def disabled_age(df=None, col_labels=None):
         "Proporção PCD na faixa (%)",
         "PCD em extrema pobreza (%)",
     )
+
+
+def responsible_child_occupation(df=None, col_labels=None):
+    from helper import calculate_age, spark_map
+
+    if df is None:
+        df = start_df()
+
+    if col_labels is None:
+        col_labels = get_labels("column_labels")
+
+    moddf = calculate_age(df, col_labels)
+
+    moddf = moddf.filter(
+        F.col(col_labels["family_code"]).isNotNull()
+    )
+
+    family_children = moddf.groupBy(
+        col_labels["family_code"]
+    ).agg(
+        F.max(
+            F.when(F.col("age").between(0, 6), 1).otherwise(0)
+        ).alias("has_child_0_6")
+    )
+
+    moddf = moddf.join(
+        family_children,
+        on=col_labels["family_code"],
+        how="left",
+    )
+
+    moddf = spark_map(
+        moddf, get_labels("sex_labels"), col_labels["sex"], "Sexo"
+    )
+
+    moddf = moddf.filter(
+        (F.col("Sexo") == "Feminino")
+        & (F.col(col_labels["family_responsible"]) == 1)
+    )
+
+    moddf = moddf.dropna(
+        subset=[col_labels["employment_income"], "has_child_0_6"]
+    )
+
+    moddf = moddf.groupBy("has_child_0_6").agg(
+        F.count("*").alias("Total"),
+        F.sum(
+            F.when(F.col(col_labels["employment_income"]) > 0, 1)
+            .otherwise(0)
+        ).alias("Ocupadas"),
+    )
+
+    moddf = moddf.withColumn(
+        "Taxa de Ocupação (%)",
+        F.round(F.col("Ocupadas") / F.col("Total") * 100, 2),
+    )
+
+    moddf = moddf.withColumn(
+        "Crianças de 0 a 6 anos",
+        F.when(F.col("has_child_0_6") == 1, "Com crianças")
+        .otherwise("Sem crianças"),
+    )
+
+    moddf = moddf.orderBy("has_child_0_6")
+
+    return moddf.select(
+        "Crianças de 0 a 6 anos", "Total", "Ocupadas", "Taxa de Ocupação (%)"
+    )
