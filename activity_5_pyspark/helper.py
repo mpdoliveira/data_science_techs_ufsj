@@ -1,6 +1,4 @@
-from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
-from pyspark.ml.feature import Bucketizer
 
 
 REFERENCE_YEAR = 2018
@@ -8,17 +6,23 @@ REFERENCE_YEAR = 2018
 # Helper functions
 
 
-def get_labels(title):
+def get_labels(title=None):
     import json
 
     with open("labels.json", encoding="utf-8") as file:
+        if title is None:
+            return json.load(file)
         return json.load(file)[title]
 
 
 def start_session():
+    from pyspark.sql import SparkSession
+
     return (
         SparkSession.builder.appName("Análise Cadastro Único")
         .master("local[*]")
+        .config("spark.driver.memory", "2g")
+        .config("spark.sql.shuffle.partitions", "8")
         .config("spark.log.level", "ERROR")
         .getOrCreate()
     )
@@ -56,6 +60,7 @@ def spark_map(df, labels, input_col, output_col="mapped"):
 
 
 def spark_bucketizer(df, config, input_col, output_col="grouped"):
+    from pyspark.ml.feature import Bucketizer
 
     # Categorize in buckets based on a config range and save on output_index_col
     output_index_col = f"{output_col}_index"
@@ -69,7 +74,10 @@ def spark_bucketizer(df, config, input_col, output_col="grouped"):
     )
 
 
-def calculate_age(df, col_labels=get_labels("column_labels")):
+def calculate_age(df, col_labels=None):
+    if col_labels is None:
+        col_labels = get_labels("column_labels")
+
     return (
         df.dropna(subset=col_labels["birth_date"])
         .withColumn(col_labels["birth_date"], F.to_date(col_labels["birth_date"]))
@@ -79,4 +87,21 @@ def calculate_age(df, col_labels=get_labels("column_labels")):
         .filter((F.col("age") >= 0) & (F.col("age") <= 130))
     )
 
+def calculate_formal_work(df, col_labels=None):
+    if col_labels is None:
+        col_labels=get_labels("column_labels")
 
+    moddf = df.dropna(
+            subset=[col_labels["gross_year_income"], col_labels["employment_income"]]
+        )
+
+    moddf = moddf.withColumn(
+            "formal_work",
+            F.when(
+                (F.col(col_labels["gross_year_income"]) != 0)
+                & (F.col(col_labels["employment_income"]) == 0),
+                2,
+            ).otherwise(1),
+        )
+
+    return moddf
