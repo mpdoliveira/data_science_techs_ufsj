@@ -9,9 +9,22 @@
             "idoso"
         ]
     },
+    "simple_age_range_labels" : {
+        "delimiters" : [0, 18, 30, 60, 130],
+        "labels" : [
+            "criança e adolescentes",
+            "jovem",
+            "adulto",
+            "idoso"
+        ]
+    },
     "boolean_labels" : {
       "1": "Sim",
       "2": "Não"  
+    },
+    "trad_boolean_labels" : {
+      "1": "Sim",
+      "0": "Não"  
     },
     "sex_labels" : {
         "1": "Homem",
@@ -41,11 +54,11 @@
         "14": "Alfabetização Adultos",
         "15": "Nenhum"
     },
-    "simplified_couse_labels": {
-        "0": "Nenhum",
-        "1": "Fundamental",
-        "2": "Médio",
-        "3": "Superior"
+    "simple_course_labels": {
+        "0" : "Nenhum",
+        "1" : "Fundamental",
+        "2" : "Médio",
+        "3" : "Superior"
     },
     "income_labels" : {
         "delimiters": [0, 109, 218, 477, 999999],
@@ -56,6 +69,19 @@
         "> 1/2 salário mínimo"
         ]
     },
+    "family_relationship" : {
+        "1" : "Responsável",
+        "2" : "Conjuge",
+        "3" : "Filho(a)",
+        "4" : "Enteado(a)",
+        "5" : "Neto(a) / Bisneto(a)",
+        "6" : "Pai / Mãe",
+        "7" : "Sogro(a)",
+        "8" : "Irmão(ã)",
+        "9" : "Genro / Nora",
+        "10" : "Outro",
+        "11" : "Não parente"
+    },
     "column_labels" : {
         "ibge_municipality_code": "CD_IBGE_CADASTRO",
         "family_code": "CO_FAMILIAR_FAM",
@@ -64,7 +90,7 @@
         "child_labor_indicator": "IN_TRABALHO_INFANTIL_PESSOA",
         "sex": "CO_SEXO_PESSOA",
         "birth_date": "DT_NASC_PESSOA",
-        "relationship_to_family_head_code": "CO_PARENTESCO_RF_PESSOA",
+        "family_relationship": "CO_PARENTESCO_RF_PESSOA",
         "race_color": "CO_RACA_COR_PESSOA",
         "disability": "CO_DEFICIENCIA_MEMB",
         "literacy_code": "CO_SABE_LER_ESCREVER_MEMB",
