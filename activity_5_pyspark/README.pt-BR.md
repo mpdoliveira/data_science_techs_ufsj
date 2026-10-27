@@ -1,136 +1,204 @@
-[English](README.md) | [Português](README.pt-BR.md)
-
 # Análise do Cadastro Único 2018 com PySpark
 
-## Visão geral
+## Sobre o projeto
 
-Este projeto analisa os **microdados públicos do Cadastro Único de 2018** utilizando **PySpark**. Foi desenvolvido como Atividade 5 da disciplina _Tecnologias para Ciência de Dados_ da Universidade Federal de São João del-Rei (UFSJ).
+Este trabalho usa microdados públicos do Cadastro Único de 2018 para observar características das pessoas e famílias registradas, como idade, renda, escolaridade, trabalho e deficiência. Também relaciona os dados municipais aos resultados eleitorais de 2018 do Tribunal Superior Eleitoral (TSE).
 
-## Análises
+Os resultados descrevem os registros do Cadastro Único, e não necessariamente toda a população brasileira. Nas análises eleitorais, a comparação é entre municípios: ela não permite descobrir como uma pessoa ou grupo específico votou, nem comprova uma relação de causa e efeito.
 
-O projeto implementa as seguintes análises:
+## Etapa 1 — Perfil demográfico e mercado de trabalho
 
-1. Distribuição de idade por sexo e cor/raça.
-2. Classificação baseada em renda do trabalho entre indivíduos de 18 a 65 anos.
-3. Renda bruta anual por categoria de escolaridade e situação de conclusão.
-4. Trabalho remunerado por faixa etária.
-5. Proporção de pessoas com deficiência (PCD) por faixa de renda familiar per capita.
+### 1.1 Idade por sexo e cor/raça
 
-# Resultados
+| Cor/raça | Sexo | Média (anos) | Mediana | Desvio padrão |
+|---|---|---:|---:|---:|
+| Branca | Homem | 27,59 | 20,00 | 22,12 |
+| Branca | Mulher | 31,29 | 29,00 | 21,45 |
+| Preta | Homem | 31,71 | 28,00 | 21,01 |
+| Preta | Mulher | 34,76 | 34,00 | 19,09 |
+| Amarela | Homem | 27,20 | 20,00 | 21,96 |
+| Amarela | Mulher | 30,93 | 29,00 | 20,48 |
+| Parda | Homem | 25,58 | 19,00 | 20,04 |
+| Parda | Mulher | 28,59 | 26,00 | 19,26 |
+| Indígena | Homem | 20,87 | 16,00 | 17,02 |
+| Indígena | Mulher | 23,19 | 20,00 | 16,95 |
 
-## 1. Distribuição de idade por sexo e cor/raça
+Em todos os grupos, as mulheres têm média e mediana de idade maiores que os homens. A maior média aparece entre mulheres pretas (34,76 anos), e a menor, entre homens indígenas (20,87 anos). Os desvios padrão mostram que há pessoas de diferentes idades em todos os grupos.
 
-| Cor/Raça | Sexo   | Média | Mediana | Desvio padrão |
-| -------- | ------ | ----: | ------: | ------------: |
-| Branca   | Homem  | 27,59 |   20,00 |         22,12 |
-| Branca   | Mulher | 31,29 |   29,00 |         21,45 |
-| Preta    | Homem  | 31,71 |   28,00 |         21,01 |
-| Preta    | Mulher | 34,76 |   34,00 |         19,09 |
-| Amarela  | Homem  | 27,20 |   20,00 |         21,96 |
-| Amarela  | Mulher | 30,93 |   29,00 |         20,48 |
-| Parda    | Homem  | 25,58 |   19,00 |         20,04 |
-| Parda    | Mulher | 28,59 |   26,00 |         19,26 |
-| Indígena | Homem  | 20,87 |   16,00 |         17,02 |
-| Indígena | Mulher | 23,19 |   20,00 |         16,95 |
+### 1.2 Classificação de trabalho entre pessoas de 18 a 65 anos
 
-### Resultado
+| Classificação usada no código | Percentual |
+|---|---:|
+| Sim | 93,69% |
+| Não | 6,31% |
 
-As mulheres apresentam média e mediana de idade superiores às dos homens em todos os grupos de cor/raça. Mulheres pretas apresentam a maior média de idade (`34,76`), enquanto homens indígenas apresentam a menor (`20,87`). Os desvios padrão variam entre `16,95` e `22,12`, indicando elevada dispersão etária em todos os grupos.
+**Atenção:** essa classificação não mede, por si só, trabalho formal e informal. A regra usada combina renda bruta e renda de trabalho; ela não confirma se a pessoa tem carteira assinada. Por isso, esses percentuais não devem ser descritos como taxas de formalidade sem validar a variável e a regra usadas.
 
----
+### 1.3 Renda bruta anual por curso frequentado e conclusão
 
-## 2. Classificação baseada em renda do trabalho entre indivíduos de 18 a 65 anos
+A tabela resume a média da renda bruta anual por curso frequentado anteriormente e situação de conclusão. São valores de renda bruta anual, não necessariamente apenas renda do trabalho.
 
-| Classificação atual | Percentual |
-| ------------------- | ---------: |
-| Sim                 |     93,69% |
-| Não                 |      6,31% |
+| Curso/escolaridade | Concluiu: Sim (R$) | Concluiu: Não (R$) |
+|---|---:|---:|
+| Creche | 3.292,17 | 1.405,66 |
+| Pré-escola | 2.846,55 | 2.154,97 |
+| Alfabetização | 2.461,25 | 2.115,81 |
+| Fundamental I | 4.850,94 | 3.574,90 |
+| Fundamental II | 5.427,11 | 4.560,32 |
+| Fundamental 9 anos | 4.107,99 | 3.863,26 |
+| Fundamental Especial | 5.433,12 | 4.175,99 |
+| Ensino Médio | 6.739,31 | 5.039,32 |
+| Médio Especial | 6.570,74 | 5.106,39 |
+| EJA Fundamental I | 3.106,75 | 2.622,58 |
+| EJA Fundamental II | 3.807,57 | 3.417,36 |
+| EJA Médio | 5.426,70 | 4.914,21 |
+| Superior | 10.251,42 | 9.326,86 |
+| Alfabetização de adultos | 2.952,17 | 2.154,75 |
+| Nenhum | 4.287,55 | 2.940,84 |
 
-### Nota metodológica
+A maior média entre as categorias apresentadas é a de Superior. Em todas as linhas, a média dos registros marcados como concluídos é maior que a dos não concluídos. Como a renda apresenta grande variação entre pessoas, a média deve ser interpretada junto com outras medidas, como a mediana.
 
-A implementação atual **não identifica diretamente trabalho formal e informal**. Os registros são classificados como `Não` quando a renda bruta anual é diferente de zero e a renda do trabalho é igual a zero; os demais registros são classificados como `Sim`.
+## Etapa 2 — Trabalho, idade e vulnerabilidade
 
-Portanto, os percentuais acima não devem ser interpretados como uma estimativa válida de trabalho formal versus informal. Para responder à questão original, é necessário utilizar uma variável ou regra que represente diretamente a formalidade do vínculo de trabalho.
+### 2.1 Pessoas com renda do trabalho por faixa etária
 
----
+Neste cálculo, considera-se que a pessoa tem trabalho remunerado quando a renda do trabalho é maior que zero.
 
-## 3. Renda bruta anual por categoria de escolaridade
+| Faixa etária | Com renda do trabalho | Sem renda do trabalho |
+|---|---:|---:|
+| Criança | 2,02% | 97,98% |
+| Adolescente | 3,60% | 96,40% |
+| Jovem | 32,62% | 67,38% |
+| Adulto | 48,16% | 51,84% |
+| Idoso | 10,85% | 89,15% |
 
-As estatísticas de renda são agrupadas pela categoria de curso frequentado anteriormente e pela situação de conclusão correspondente.
+A maior proporção está entre adultos (48,16%), seguida pelos jovens (32,62%). Entre crianças e adolescentes, os percentuais são menores. Esses valores refletem a renda do trabalho registrada na base e dependem da definição adotada no código.
 
-| Escolaridade          | Concluiu |     Média |   Mediana | Desvio padrão |
-| --------------------- | -------- | --------: | --------: | ------------: |
-| Creche                | Sim      |  3.292,17 |  1.820,00 |      3.729,92 |
-| Creche                | Não      |  1.405,66 |    900,00 |      1.653,52 |
-| Pré-escola            | Sim      |  2.846,55 |  1.300,00 |      3.722,66 |
-| Pré-escola            | Não      |  2.154,97 |  1.000,00 |      2.964,04 |
-| Alfabetização         | Sim      |  2.461,25 |  1.200,00 |      3.356,18 |
-| Alfabetização         | Não      |  2.115,81 |  1.200,00 |      3.110,43 |
-| Fundamental I         | Sim      |  4.850,94 |  2.500,00 |      5.716,49 |
-| Fundamental I         | Não      |  3.574,90 |  1.800,00 |      4.709,73 |
-| Fundamental II        | Sim      |  5.427,11 |  3.012,00 |      6.003,69 |
-| Fundamental II        | Não      |  4.560,32 |  2.400,00 |      5.353,12 |
-| Fundamental 9 anos    | Sim      |  4.107,99 |  2.000,00 |      5.156,41 |
-| Fundamental 9 anos    | Não      |  3.863,26 |  1.800,00 |      5.148,66 |
-| Fundamental Especial  | Sim      |  5.433,12 |  2.640,00 |      6.682,64 |
-| Fundamental Especial  | Não      |  4.175,99 |  2.000,00 |      5.379,35 |
-| Ensino Médio          | Sim      |  6.739,31 |  4.400,00 |      6.989,25 |
-| Ensino Médio          | Não      |  5.039,32 |  2.800,00 |      5.699,39 |
-| Médio Especial        | Sim      |  6.570,74 |  3.600,00 |      7.509,66 |
-| Médio Especial        | Não      |  5.106,39 |  2.400,00 |      6.168,80 |
-| EJA Fundamental I     | Sim      |  3.106,75 |  1.455,00 |      4.122,45 |
-| EJA Fundamental I     | Não      |  2.622,58 |  1.200,00 |      3.656,59 |
-| EJA Fundamental II    | Sim      |  3.807,57 |  2.000,00 |      4.555,03 |
-| EJA Fundamental II    | Não      |  3.417,36 |  1.800,00 |      4.530,67 |
-| EJA Médio             | Sim      |  5.426,70 |  3.600,00 |      5.603,10 |
-| EJA Médio             | Não      |  4.914,21 |  2.880,00 |      5.368,28 |
-| Superior              | Sim      | 10.251,42 | 10.307,00 |      8.891,10 |
-| Superior              | Não      |  9.326,86 |  9.000,00 |      8.427,37 |
-| Alfabetização Adultos | Sim      |  2.952,17 |  1.200,00 |      4.449,89 |
-| Alfabetização Adultos | Não      |  2.154,75 |  1.020,00 |      3.187,98 |
-| Nenhum                | Sim      |  4.287,55 |  2.400,00 |      4.981,06 |
-| Nenhum                | Não      |  2.940,84 |  1.800,00 |      3.351,01 |
+### 2.2 Pessoas com deficiência por faixa de renda familiar per capita
 
-### Resultado
+| Renda familiar per capita | PCD (%) |
+|---|---:|
+| R$ 0 a menos de R$ 109 | 1,97% |
+| R$ 109 a menos de R$ 218 | 2,85% |
+| R$ 218 a menos de R$ 477 | 3,19% |
+| R$ 477 a menos de R$ 999.999 | 3,75% |
 
-A categoria `Superior` apresenta a maior média e mediana de renda bruta anual. Em todas as categorias apresentadas, a renda média é maior entre os registros marcados como concluídos do que entre os não concluídos. Os elevados desvios padrão indicam ampla dispersão de renda dentro das categorias.
+A proporção registrada de PCD cresce entre as faixas mostradas, de 1,97% na menor para 3,75% na maior. É uma associação descritiva: esses números não indicam que a renda cause deficiência ou o contrário. Também é importante confirmar que cada percentual foi calculado usando como denominador as pessoas daquela faixa de renda.
 
----
+## Etapa 3 — Enriquecimento com resultados eleitorais do TSE
 
-## 4. Trabalho remunerado por faixa etária
+### 3.1 Por que usar essa base?
 
-Trabalho remunerado é definido como renda do trabalho maior que zero.
+Os resultados eleitorais acrescentam uma dimensão política aos dados socioeconômicos do Cadastro Único. Ao juntar as bases por município, é possível investigar se características socioeconômicas municipais estão associadas à participação de votos dos partidos. A análise não identifica o voto individual das pessoas cadastradas.
 
-| Faixa etária | Trabalha | Percentual |
-| ------------ | -------- | ---------: |
-| Criança      | Sim      |      2,02% |
-| Criança      | Não      |     97,98% |
-| Adolescente  | Sim      |      3,60% |
-| Adolescente  | Não      |     96,40% |
-| Jovem        | Sim      |     32,62% |
-| Jovem        | Não      |     67,38% |
-| Adulto       | Sim      |     48,16% |
-| Adulto       | Não      |     51,84% |
-| Idoso        | Sim      |     10,85% |
-| Idoso        | Não      |     89,15% |
+### 3.2 Como as bases foram conectadas
 
-### Resultado
+1. O Cadastro Único usa o código de município do IBGE (`CD_IBGE_CADASTRO`), enquanto o arquivo eleitoral usa o código do TSE (`CD_MUNICIPIO`).
+2. A tabela `municipio_tse_ibge.csv` permite relacionar `CD_MUNICIPIO_TSE` a `CD_MUNICIPIO_IBGE`.
+3. Os códigos são padronizados para cinco dígitos no TSE e sete no IBGE, preservando zeros à esquerda.
+4. Um `inner join` mantém apenas os registros eleitorais com correspondência na tabela de códigos.
+5. Os votos são agregados por município e partido. Para as análises a seguir, são considerados os resultados para presidente.
 
-Adultos apresentam a maior proporção de registros com renda do trabalho (`48,16%`), seguidos por jovens (`32,62%`). As proporções são de `10,85%` entre idosos, `3,60%` entre adolescentes e `2,02%` entre crianças.
+### 3.3 Pergunta 1 — Pobreza e participação dos votos
 
----
+**Pergunta:** Municípios com maior proporção de famílias em situação de pobreza apresentam maior participação de votos de determinados partidos?
 
-## 5. Pessoas com deficiência por renda familiar per capita
+A análise usa a proporção de famílias com renda mensal per capita estimada de até R$ 178 e compara esse indicador à participação de votos de cada partido nos municípios.
 
-| Renda familiar per capita   |   PCD |
-| --------------------------- | ----: |
-| R$ 0 ≤ renda < R$ 109       | 1,97% |
-| R$ 109 ≤ renda < R$ 218     | 2,85% |
-| R$ 218 ≤ renda < R$ 477     | 3,19% |
-| R$ 477 ≤ renda < R$ 999.999 | 3,75% |
+| Partido | Número | Correlação | Associação observada |
+|---|---:|---:|---|
+| Partido dos Trabalhadores (PT) | 13 | 0,672 | Positiva forte |
+| Partido Democrático Trabalhista (PDT) | 12 | 0,175 | Positiva fraca |
+| Patriota | 51 | 0,153 | Positiva fraca |
+| Partido Socialista Brasileiro (PSB) | 45 | -0,334 | Negativa moderada |
+| Partido Novo | 30 | -0,511 | Negativa relativamente forte |
+| Partido Social Liberal (PSL) | 17 | -0,678 | Negativa forte |
 
-### Resultado
+**Municípios analisados:** 5.570.
 
-A proporção observada de pessoas com deficiência aumenta entre as quatro faixas de renda, de `1,97%` na faixa mais baixa para `3,75%` na mais alta. Trata-se de uma associação descritiva e não de evidência de causalidade.
+O PT tem correlação positiva (0,672): sua participação nos votos tendia a ser maior em municípios com maior proporção de famílias abaixo do limite de renda usado. O PSL apresenta o padrão oposto (-0,678), assim como o Partido Novo (-0,511). As associações de PDT e Patriota são positivas, mas fracas.
 
----
+### 3.4 Pergunta 2 — Renda média e participação dos votos
+
+**Pergunta:** A renda mensal per capita média das famílias cadastradas está associada à porcentagem de votos recebida por cada partido na eleição presidencial?
+
+| Partido | Número | Correlação | Associação observada |
+|---|---:|---:|---|
+| Partido Social Liberal (PSL) | 17 | 0,616 | Positiva forte |
+| Partido Novo | 30 | 0,467 | Positiva moderada |
+| Podemos | 19 | 0,305 | Positiva moderada a fraca |
+| Patriota | 51 | -0,168 | Negativa fraca |
+| Partido Democrático Trabalhista (PDT) | 12 | -0,170 | Negativa fraca |
+| Partido dos Trabalhadores (PT) | 13 | -0,614 | Negativa forte |
+
+**Municípios analisados:** 5.570.
+
+O PSL apresenta associação positiva (0,616): sua participação nos votos tendia a ser maior em municípios com renda média mais alta entre as famílias cadastradas. Novo e Podemos também apresentam correlações positivas. O PT tem associação negativa (-0,614), indicando uma tendência municipal inversa.
+
+As duas análises apresentam padrões compatíveis: o PT está positivamente associado à proporção de famílias em situação de pobreza e negativamente à renda média; para o PSL, observa-se o contrário. Isso não prova causalidade e não permite afirmar como pessoas pobres ou de maior renda votaram individualmente.
+
+## Etapa 4 — Gráficos
+
+Os gráficos de graphs.py ilustram alguns resultados das Etapas 1 e 2 usando `matplotlib`. Os títulos e os eixos identificam o que está sendo comparado.
+
+## Perguntas específicas do exercício
+
+### 1. Diferença de renda do trabalho por sexo e cor/raça
+
+**Pergunta:** Qual é a diferença na média e na mediana da renda individual do trabalho entre homens e mulheres, agrupados por cor/raça?
+
+| Cor/raça | Sexo | Valor informado em “Diferença” |
+|---|---|---:|
+| Branca | Homem | 298,05 |
+| Branca | Mulher | 178,02 |
+| Preta | Homem | 227,67 |
+| Preta | Mulher | 162,36 |
+| Amarela | Homem | 220,57 |
+| Amarela | Mulher | 160,22 |
+| Parda | Homem | 191,40 |
+| Parda | Mulher | 133,23 |
+| Indígena | Homem | 128,70 |
+| Indígena | Mulher | 84,28 |
+
+Os valores informados são maiores para homens do que para mulheres em cada categoria. Porém, como a saída apresenta apenas uma coluna chamada “Diferença”, não dá para saber se ela corresponde à diferença entre média e mediana ou à diferença salarial entre os sexos. Para responder completamente à pergunta, é necessário confirmar o cálculo e apresentar as médias e medianas separadamente. A unidade também deve ser identificada como reais, se for o caso.
+
+### 2. Trabalho informal por escolaridade
+
+| Escolaridade | Trabalho informal (%) |
+|---|---:|
+| Nenhum | 5,51% |
+| Fundamental | 6,20% |
+| Médio | 7,03% |
+| Superior | 6,90% |
+
+A maior taxa reportada é a do ensino médio (7,03%), seguida pelo ensino superior (6,90%). A menor aparece entre pessoas sem instrução (5,51%). A interpretação como informalidade depende da regra utilizada: a classificação baseada apenas em rendas não comprova, por si só, a ausência de carteira assinada.
+
+### 3. Pessoas com deficiência e extrema pobreza por faixa etária
+
+| Faixa etária | Distribuição das PCD (%) | Em extrema pobreza (%) |
+|---|---:|---:|
+| Crianças e adolescentes (0–17) | 17,09% | 34,42% |
+| Jovens (18–29) | 13,97% | 28,23% |
+| Adultos (30–59) | 43,09% | 28,99% |
+| Idosos (60+) | 25,85% | 28,93% |
+
+Adultos representam a maior parcela das PCD registradas (43,09%). Já crianças e adolescentes apresentam o maior percentual em extrema pobreza: 34,42%, considerando renda familiar per capita de até R$ 89 mensais. A primeira coluna de percentuais descreve a distribuição etária entre as PCD; a segunda descreve a proporção em extrema pobreza dentro de cada faixa.
+
+### 4. Trabalho remunerado de mulheres responsáveis por famílias com crianças pequenas
+
+**Pergunta:** A taxa de trabalho remunerado varia entre mulheres responsáveis por famílias com crianças de 0 a 6 anos e aquelas sem crianças nessa faixa?
+
+| Criança de 0 a 6 anos na família? | Trabalha | Percentual |
+|---|---|---:|
+| Sim | Sim | 91,51% |
+| Sim | Não | 8,49% |
+| Não | Sim | 93,21% |
+| Não | Não | 6,79% |
+
+A taxa reportada é de 91,51% entre mulheres responsáveis em famílias com crianças pequenas e de 93,21% entre aquelas sem crianças nessa faixa, uma diferença de 1,70 ponto percentual. É uma diferença descritiva e não prova que ter crianças pequenas cause redução na ocupação. O resultado também depende da definição de trabalho remunerado usada no código.
+
+## Conclusão
+
+Os dados mostram diferenças de idade, renda e trabalho entre grupos do Cadastro Único. Adultos têm a maior proporção de registros com renda do trabalho, a renda bruta anual média mais alta aparece na categoria de curso superior, e crianças e adolescentes com deficiência apresentam o maior percentual de extrema pobreza entre as faixas analisadas.
+
+No cruzamento eleitoral, a participação de votos do PT esteve mais associada a municípios com maior pobreza e menor renda média entre as famílias cadastradas; para o PSL, observou-se o padrão oposto. Esses resultados ajudam a descrever diferenças entre municípios, mas não explicam, sozinhos, por que as pessoas votaram de determinada maneira. As conclusões também dependem da qualidade das variáveis e das regras usadas para classificar renda, trabalho e escolaridade.
