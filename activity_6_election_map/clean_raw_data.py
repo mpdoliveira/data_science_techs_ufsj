@@ -35,7 +35,6 @@ df = df.drop(
         "ANO_ELEICAO",
         "CD_TIPO_ELEICAO",
         "NM_TIPO_ELEICAO",
-        "NR_TURNO",
         "CD_ELEICAO",
         "DS_ELEICAO",
         "DT_ELEICAO",
@@ -72,7 +71,7 @@ df["DS_LOCAL_VOTACAO_ENDERECO"] = (
 )
 
 df = df.groupby(
-    ["NR_VOTAVEL", "DS_LOCAL_VOTACAO_ENDERECO"],
+    ["NR_VOTAVEL", "DS_LOCAL_VOTACAO_ENDERECO", "NR_TURNO"],
     as_index=False
 ).agg(
     QT_VOTOS=("QT_VOTOS", "sum"),
@@ -87,4 +86,4 @@ df = df.groupby(
     )
 )
 
-df.to_csv("resultados_presidente_sjdr_1_turno.csv", index=False)
+df.to_csv("resultados_presidente_sjdr.csv", index=False)
