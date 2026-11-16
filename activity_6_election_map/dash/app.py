@@ -1,277 +1,296 @@
-"""Dashboard eleitoral: Presidente 2026 em São João del-Rei (UFSJ / DCOMP)."""
+from __future__ import annotations
+
 import json
 from pathlib import Path
 
-import branca.colormap as cm
-import folium as fl
 import pandas as pd
-import plotly.express as px
 import streamlit as st
-from streamlit_folium import st_folium
 
-BASE = Path(__file__).parent
-CSV = BASE / "data" / "resultados_presidente_sjdr_coordenadas_manuais.csv"
-GEOJSON = BASE / "data" / "sjdr_limite.geojson"
-BRANCO, NULO = 95, 96
+from charts import distribuicao, evolucao, margem, ranking
+from core import CSV, carregar_base, cor, filtrar_locais, inteiro, percentual, rotulo, totais_municipais
+from maps import carregar_geometria, criar_mapa
+import streamlit.components.v1 as components
 
-CANDIDATOS = {
-    13: {"partido": "PT", "nome": "Lula", "cor": "#d62728"},
-    22: {"partido": "PL", "nome": "Flavio Bolsonaro", "cor": "#1f4e9c"},
-    70: {"partido": "AVANTE", "nome": "Augusto Cury", "cor": "#9467bd"},
-    55: {"partido": "PSD", "nome": "Ronaldo Caiado", "cor": "#17becf"},
-    30: {"partido": "NOVO", "nome": "Romeu Zema", "cor": "#ff7f0e"},
-    14: {"partido": "MISSAO", "nome": "Renan Santos", "cor": "#ffc222"},
-}
-COR_PADRAO = "#7f7f7f"
+ROOT = Path(__file__).resolve().parent.parent
+MAPA_ORIGINAL = ROOT / "sjdr_election_map.html"
 
+st.set_page_config(
+    page_title="Atlas eleitoral | São João del-Rei",
+    page_icon="🗳️",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
 
-def rotulo(n):
-    n = int(n)
-    if n == BRANCO:
-        return "Branco"
-    if n == NULO:
-        return "Nulo"
-    c = CANDIDATOS.get(n, {})
-    if c.get("nome"):
-        return f"{c['nome']} ({n})"
-    return f"{n} – {c['partido']}" if c.get("partido") else f"Candidato {n}"
-
-
-def cor(n):
-    return CANDIDATOS.get(int(n), {}).get("cor", COR_PADRAO)
-
-
-def milhar(x):
-    return f"{int(x):,}".replace(",", ".")
+st.markdown("""
+<style>
+    .block-container {max-width: 1550px; padding-top: 1.45rem; padding-bottom: 2.8rem;}
+    [data-testid="stMetric"] {background: #f6f9fc; border: 1px solid #e0e9f0; border-radius: 13px; padding: 16px 18px;}
+    [data-testid="stMetricValue"] {font-size: clamp(1.2rem, 2vw, 2rem); color: #18364e;}
+    [data-testid="stMetricLabel"] {color: #526579; font-weight: 600;}
+    div[data-testid="stTabs"] button {font-weight: 600;}
+    .atlas-hero {background: linear-gradient(115deg, #102a43 0%, #1b5671 100%); padding: 24px 28px;
+                 border-radius: 15px; margin-bottom: 16px; color: #fff;}
+    .atlas-kicker {font-size: 11px; letter-spacing: 2.2px; text-transform: uppercase; opacity: .78; font-weight: 800;}
+    .atlas-hero h1 {color: #fff; font-size: clamp(1.45rem, 3vw, 2.2rem); margin: 7px 0 6px; line-height: 1.2;}
+    .atlas-hero p {margin: 0; font-size: 13px; color: #dcecf5;}
+    .atlas-muted {font-size: 12px; color: #5d7288; margin-bottom: 12px;}
+    [data-testid="stSidebar"] {background-color: #f8fafc;}
+    [data-testid="stSidebar"] h2 {font-size: 1.08rem;}
+</style>
+""", unsafe_allow_html=True)
 
 
-def nome_comum(valores):
-    nomes = [str(n).strip().split() for n in valores.dropna().unique()]
-    if not nomes:
-        return "Local de votação"
-    palavras = []
-    for grupo in zip(*nomes):
-        if len(set(grupo)) != 1:
-            break
-        palavras.append(grupo[0])
-    return " ".join(palavras) or " / ".join(" ".join(n) for n in nomes)
+@st.cache_data(show_spinner="Carregando resultados eleitorais...")
+def obter_dados():
+    return carregar_base(CSV)
 
 
-def juntar_secoes(valores):
-    s = valores.dropna().astype(str).str.split(",").explode().str.strip()
-    s = pd.to_numeric(s, errors="coerce").dropna().astype(int)
-    return ", ".join(map(str, sorted(s.unique())))
+@st.cache_data(show_spinner=False)
+def obter_geometria(turno: int):
+    return carregar_geometria(turno)
 
 
-@st.cache_data
-def carregar():
-    raw = pd.read_csv(CSV)
-    ok = raw.dropna(subset=["LATITUDE", "LONGITUDE"]).copy()
-    ok["LOCAL_ID"] = ok.groupby(["LATITUDE", "LONGITUDE"]).ngroup()
-    locais = ok.groupby("LOCAL_ID").agg(
-        LATITUDE=("LATITUDE", "first"),
-        LONGITUDE=("LONGITUDE", "first"),
-        LOCAL=("NM_LOCAL_VOTACAO", nome_comum),
-        SECOES=("NR_SECOES", juntar_secoes),
-    )
-    votos = ok.groupby(["LOCAL_ID", "NR_TURNO", "NR_VOTAVEL"], as_index=False)["QT_VOTOS"].sum()
-    return raw, locais, votos
+try:
+    raw, locais, candidatos = obter_dados()
+except (OSError, ValueError, KeyError) as erro:
+    st.error(f"Não foi possível carregar a base eleitoral: {erro}")
+    st.stop()
 
-
-@st.cache_data
-def resumo_turno(turno):
-    """Resumo por local de votação: votos válidos, brancos/nulos, líder e % por candidato."""
-    _, locais, votos = carregar()
-    v = votos[votos.NR_TURNO == turno]
-    is_bn = v.NR_VOTAVEL.isin([BRANCO, NULO])
-    val = v[~is_bn]
-    pivot = val.pivot_table(index="LOCAL_ID", columns="NR_VOTAVEL", values="QT_VOTOS", aggfunc="sum", fill_value=0)
-    validos = pivot.sum(axis=1).rename("VALIDOS")
-    pct = pivot.div(validos, axis=0) * 100
-    bn = v[is_bn].groupby("LOCAL_ID")["QT_VOTOS"].sum().rename("BRANCO_NULO")
-    res = locais.join(validos, how="inner").join(bn).fillna({"BRANCO_NULO": 0})
-    res["LIDER"] = pivot.idxmax(axis=1)
-    res["PCT_LIDER"] = pct.max(axis=1)
-    return res, pct
-
-
-def tooltip_html(r, pct_row, extra=""):
-    top = pct_row.sort_values(ascending=False).head(3)
-    linhas = "".join(
-        f"<tr><td style='padding-right:12px'>{rotulo(c)}</td>"
-        f"<td style='text-align:right'><b>{p:.1f}%</b></td></tr>"
-        for c, p in top.items()
-    )
-    return (
-        "<div style='font-family:sans-serif;font-size:13px;line-height:1.45;min-width:220px'>"
-        f"<div style='font-size:14px;font-weight:700'>{r.LOCAL}</div>"
-        f"<div style='color:#666'>Seções: {r.SECOES}</div>"
-        "<hr style='margin:5px 0'>"
-        f"Líder: <b style='color:{cor(r.LIDER)}'>{rotulo(r.LIDER)}</b> ({r.PCT_LIDER:.1f}%)"
-        f"{extra}<table style='margin-top:4px'>{linhas}</table>"
-        f"<div style='color:#666;margin-top:4px'>Votos válidos: {milhar(r.VALIDOS)}</div></div>"
-    )
-
-
-def construir_mapa(res, pct, modo, a, b):
-    m = fl.Map(location=[-21.1365, -44.2619], zoom_start=13, tiles="OpenStreetMap")
-    limite = None
-    if GEOJSON.exists():
-        limite = fl.GeoJson(
-            json.loads(GEOJSON.read_text(encoding="utf-8")),
-            name="Limite municipal",
-            style_function=lambda f: {"fillColor": "#3388ff", "color": "#222", "weight": 2, "fillOpacity": 0.04},
-        ).add_to(m)
-
-    cmap = None
-    if modo == "pct":
-        vmax = float(pct[a].max())
-        cmap = cm.LinearColormap(["#f7f7f7", cor(a)], vmin=0, vmax=vmax, caption=f"% de votos válidos – {rotulo(a)}")
-    elif modo == "comp":
-        lim = float((pct[a] - pct[b]).abs().max()) or 1.0
-        cmap = cm.LinearColormap(
-            [cor(b), "#f5f5f5", cor(a)], vmin=-lim, vmax=lim,
-            caption=f"Diferença (p.p.): ← {rotulo(b)} | {rotulo(a)} →",
-        )
-
-    camada = fl.FeatureGroup(name="Locais de votação").add_to(m)
-    vmax_votos = res.VALIDOS.max()
-    for lid, r in res.iterrows():
-        extra = ""
-        if modo == "lider":
-            fill = cor(r.LIDER)
-        elif modo == "pct":
-            fill = cmap(pct.loc[lid, a])
-            extra = f"<br>{rotulo(a)}: <b>{pct.loc[lid, a]:.1f}%</b>"
-        else:
-            d = pct.loc[lid, a] - pct.loc[lid, b]
-            fill = cmap(d)
-            extra = f"<br>Diferença {rotulo(a)} − {rotulo(b)}: <b>{d:+.1f} p.p.</b>"
-        fl.CircleMarker(
-            location=[r.LATITUDE, r.LONGITUDE],
-            radius=6 + 14 * (r.VALIDOS / vmax_votos) ** 0.5,
-            color="#333", weight=1, fill=True, fill_color=fill, fill_opacity=0.85,
-            tooltip=fl.Tooltip(tooltip_html(r, pct.loc[lid], extra), sticky=True),
-        ).add_to(camada)
-
-    if cmap:
-        cmap.add_to(m)
-    fl.LayerControl(collapsed=False).add_to(m)
-    if limite is not None:
-        m.fit_bounds(limite.get_bounds())
-    else:
-        m.fit_bounds([[res.LATITUDE.min(), res.LONGITUDE.min()], [res.LATITUDE.max(), res.LONGITUDE.max()]])
-    return m
-
-
-# interface
-st.set_page_config(page_title="Eleição Presidencial – São João del-Rei", page_icon="🗳️", layout="wide")
-st.sidebar.caption(f"Rodando: {__file__}")
-raw, locais, votos = carregar()
-
-st.title("🗳️ Eleição presidencial em São João del-Rei")
-st.caption("Votação por local de votação, 1º e 2º turnos · Dados abertos do TSE · UFSJ – Ferramentas para Data Science")
+turnos = sorted(int(t) for t in raw.NR_TURNO.unique())
 
 with st.sidebar:
-    st.header("Filtros")
-    turno = st.radio("Turno", [1, 2], format_func=lambda t: f"{t}º turno", horizontal=True)
-    res, pct = resumo_turno(turno)
-    ordem = list(pct.sum().sort_values(ascending=False).index)
-    st.subheader("Mapa")
-    modo = st.radio(
-        "Visualização",
-        ["lider", "pct", "comp"],
-        format_func={
-            "lider": "Candidato líder por local",
-            "pct": "% de um candidato (graduado)",
-            "comp": "Comparação entre dois candidatos",
-        }.get,
+    st.markdown("### 🗳️ Explorar eleições")
+    st.caption("São João del-Rei · Dados por local de votação")
+    turno = st.radio("Turno", turnos, horizontal=True, format_func=lambda t: f"{t}º turno")
+    dados_turno = locais.loc[locais.NR_TURNO == turno].copy()
+    municipio = totais_municipais(raw, turno)
+    ordenados = sorted(candidatos, key=lambda c: -int(dados_turno[c].sum()))
+    vencedores_opcoes = sorted(dados_turno.VENCEDOR.unique().astype(int), key=lambda c: -int((dados_turno.VENCEDOR == c).sum()))
+    st.divider()
+    st.markdown("**Filtros dos locais**")
+    vencedores = st.multiselect(
+        "Candidato vencedor", vencedores_opcoes, default=vencedores_opcoes,
+        format_func=rotulo, key=f"vencedores_{turno}",
+        help="Mostra apenas os locais vencidos por um ou mais candidatos selecionados.",
     )
-    a, b = ordem[0], ordem[1]
-    if modo == "pct":
-        a = st.selectbox("Candidato", ordem, format_func=rotulo)
-    elif modo == "comp":
-        a = st.selectbox("Candidato A", ordem, index=0, format_func=rotulo)
-        b = st.selectbox("Candidato B", ordem, index=1, format_func=rotulo)
+    busca = st.text_input("Buscar local, endereço ou seção", placeholder="Ex.: UFSJ, 135, Centro", key="busca_local")
+    votos_minimos = st.number_input(
+        "Mínimo de votos válidos por local", min_value=0,
+        max_value=int(dados_turno.VALIDOS.max()), value=0, step=100,
+        key=f"min_votos_{turno}",
+    )
+    forca_minima = st.slider("Força mínima do vencedor (%)", 0, 100, 0, 5, key="forca_lider")
+    st.divider()
+    st.markdown("**Análise por candidato**")
+    a = st.selectbox(
+        "Candidato A", ordenados, index=ordenados.index(13) if 13 in ordenados else 0,
+        format_func=rotulo, key="cand_a",
+    )
+    candidatos_b = [c for c in ordenados if c != a]
+    b = st.selectbox(
+        "Candidato B (comparação)", candidatos_b,
+        index=candidatos_b.index(22) if 22 in candidatos_b else 0,
+        format_func=rotulo, key="cand_b",
+    )
+    pct_minima = st.slider(
+        f"Participação mínima de {rotulo(a)} (%)", 0, 100, 0, 5,
+        key=f"min_pct_{a}",
+        help="Filtra locais onde o candidato A recebeu menos que o percentual indicado.",
+    )
+    st.divider()
+    st.markdown("**Exibição cartográfica**")
+    modo = st.selectbox(
+        "Cor dos polígonos",
+        ["Líder por local", "% do candidato", "Diferença A − B", "Volume de votos"],
+        help="As áreas dos polígonos são as mesmas do mapa original; só a cor muda.",
+    )
+    mostrar_pontos = st.checkbox("Mostrar pontos dos locais", value=True)
+    foco = st.selectbox("Enquadramento", ["Município", "Locais filtrados"], index=0)
+    st.caption("Transparência dos polígonos: 45%–75% de opacidade, proporcional aos votos válidos.")
+    def limpar_filtros():
+        for chave in [f"vencedores_{turno}", "busca_local", f"min_votos_{turno}", "forca_lider", f"min_pct_{a}"]:
+            st.session_state.pop(chave, None)
 
-mt = raw[raw.NR_TURNO == turno]
-bn_mt = mt[mt.NR_VOTAVEL.isin([BRANCO, NULO])].QT_VOTOS.sum()
-val_mt = mt[~mt.NR_VOTAVEL.isin([BRANCO, NULO])].groupby("NR_VOTAVEL").QT_VOTOS.sum().sort_values(ascending=False)
-lider_mt, vot_lider = val_mt.index[0], val_mt.iloc[0]
+    st.button("Limpar filtros", use_container_width=True, on_click=limpar_filtros)
 
-c1, c2, c3, c4 = st.columns(4)
-c1.metric("Votos válidos", milhar(val_mt.sum()))
-c2.metric("Brancos e nulos", milhar(bn_mt), f"{bn_mt / (bn_mt + val_mt.sum()) * 100:.1f}% do total", delta_color="off")
-c3.metric("Mais votado", rotulo(lider_mt), f"{vot_lider / val_mt.sum() * 100:.1f}% dos válidos", delta_color="off")
-c4.metric("Locais de votação", raw.DS_LOCAL_VOTACAO_ENDERECO.nunique())
+recorte = filtrar_locais(
+    locais, turno, vencedores, busca, int(votos_minimos), float(forca_minima), a, float(pct_minima)
+)
+selecionados = set(recorte.LOCAL_ID)
+votos_recorte = int(recorte.VALIDOS.sum())
+locais_recorte = len(recorte)
+quantia_bn = int(recorte.BRANCO_NULO.sum())
+contagem = {c: int(recorte[c].sum()) for c in candidatos}
+mais_votado = max(contagem, key=lambda codigo: contagem[codigo]) if votos_recorte else None
 
-sem_coord = mt[mt.LATITUDE.isna() | mt.LONGITUDE.isna()].QT_VOTOS.sum()
-if sem_coord:
-    st.warning(f"{milhar(sem_coord)} votos ({sem_coord / mt.QT_VOTOS.sum() * 100:.1f}%) são de locais sem coordenadas e não aparecem no mapa, mas entram nos totais acima.")
+st.markdown(
+    '<section class="atlas-hero"><div class="atlas-kicker">Atlas eleitoral interativo</div>'
+    '<h1>São João del-Rei · Eleição presidencial</h1>'
+    '<p>Geometrias originais de Voronoi · Resultados por local de votação · Filtros sincronizados</p></section>',
+    unsafe_allow_html=True,
+)
 
-col_mapa, col_graf = st.columns([3, 2], gap="medium")
+k1, k2, k3, k4 = st.columns(4)
+k1.metric("Votos válidos no recorte", inteiro(votos_recorte))
+k2.metric("Locais selecionados", inteiro(locais_recorte), f"de {len(dados_turno)} georreferenciados", delta_color="off")
+k3.metric("Líder no recorte", rotulo(mais_votado) if mais_votado is not None else "—")
+k4.metric("Cobertura do voto válido municipal", percentual(100 * votos_recorte / municipio["validos"]) if municipio["validos"] else "—")
 
-with col_mapa:
-    if modo == "comp" and a == b:
-        st.info("Escolha dois candidatos diferentes para comparar.")
-    else:
-        st_folium(construir_mapa(res, pct, modo, a, b), height=640, use_container_width=True, returned_objects=[], key=f"mapa-{turno}-{modo}-{a}-{b}-{hash(str(CANDIDATOS))}")
-        st.caption("O tamanho do círculo é proporcional aos votos válidos do local. Passe o mouse para ver o detalhe.")
+with st.expander("Conferir totais municipais, dados sem coordenadas e critérios", expanded=False):
+    x1, x2, x3, x4 = st.columns(4)
+    x1.metric("Votos válidos no município", inteiro(municipio["validos"]))
+    x2.metric("Brancos", inteiro(municipio["brancos"]))
+    x3.metric("Nulos", inteiro(municipio["nulos"]))
+    x4.metric("Votos sem coordenadas", inteiro(municipio["sem_coordenadas"]))
+    st.caption(
+        "Os indicadores principais são calculados somente para os locais georreferenciados que passam nos filtros. "
+        "Os totais municipais utilizam todas as linhas do CSV, incluindo locais sem coordenadas. "
+        "A diferença entre ambos é esperada mesmo quando não há filtros ativos."
+    )
 
-with col_graf:
-    d = pd.DataFrame({"Candidato": [rotulo(c) for c in val_mt.index], "Votos": val_mt.values, "num": val_mt.index})
-    d["% válidos"] = d.Votos / d.Votos.sum() * 100
-    fig = px.bar(d, x="% válidos", y="Candidato", orientation="h", text=d["% válidos"].map("{:.1f}%".format),
-                 color="Candidato", color_discrete_map={rotulo(n): cor(n) for n in d.num},
-                 title=f"Votos válidos por candidato – {turno}º turno")
-    fig.update_layout(showlegend=False, yaxis={"categoryorder": "total ascending"}, height=320, margin=dict(l=0, r=0, t=40, b=0))
-    st.plotly_chart(fig, width="stretch")
+if recorte.empty:
+    st.warning("Nenhum local corresponde aos filtros selecionados. Ajuste os critérios na barra lateral.")
+    st.stop()
 
-    fin = [13, 22]
-    t = raw[raw.NR_VOTAVEL.isin(fin)].groupby(["NR_TURNO", "NR_VOTAVEL"], as_index=False).QT_VOTOS.sum()
-    t["Candidato"] = t.NR_VOTAVEL.map(rotulo)
-    t["Turno"] = t.NR_TURNO.map(lambda x: f"{x}º turno")
-    fig2 = px.bar(t, x="Turno", y="QT_VOTOS", color="Candidato", barmode="group", text="QT_VOTOS",
-                  color_discrete_map={rotulo(n): cor(n) for n in fin}, title="Finalistas: 1º vs 2º turno")
-    fig2.update_layout(yaxis_title="Votos", height=300, margin=dict(l=0, r=0, t=40, b=0))
-    st.plotly_chart(fig2, width="stretch")
+aba_mapa, aba_ranking, aba_local, aba_margem, aba_turnos, aba_tabela, aba_sobre = st.tabs([
+    "🗺️ Mapa", "📊 Ranking", "📈 Por local", "⚖️ Margem", "🔄 Turnos", "🏫 Tabela", "ℹ️ Método",
+])
 
-if len(ordem) >= 2:
-    fa, fb = (13, 22) if {13, 22} <= set(pct.columns) else (ordem[0], ordem[1])
-    marg = (pct[fa] - pct[fb]).rename("Diferença (p.p.)").to_frame().join(res.LOCAL).sort_values("Diferença (p.p.)")
-    marg["Vence"] = marg["Diferença (p.p.)"].map(lambda x: rotulo(fa) if x > 0 else rotulo(fb))
-    fig3 = px.bar(marg, x="Diferença (p.p.)", y="LOCAL", orientation="h", color="Vence",
-                  color_discrete_map={rotulo(fa): cor(fa), rotulo(fb): cor(fb)},
-                  title=f"Margem por local: {rotulo(fa)} vs {rotulo(fb)} ({turno}º turno)", height=max(400, 18 * len(marg)))
-    fig3.update_layout(yaxis_title=None)
-    st.plotly_chart(fig3, width="stretch")
+with aba_mapa:
+    titulo, detalhe = st.columns([3, 1])
+    with titulo:
+        st.subheader("Mapa das regiões de Voronoi")
+        st.caption(f"{turno}º turno · {modo} · {locais_recorte} locais correspondem aos filtros")
+    with detalhe:
+        st.download_button(
+            "Baixar HTML original", MAPA_ORIGINAL.read_bytes(),
+            file_name="sjdr_election_map_original.html", mime="text/html", use_container_width=True,
+        )
+    try:
+        mapa, geometrias = criar_mapa(
+            recorte, dados_turno, turno, candidatos, modo, a, b,
+            mostrar_pontos=mostrar_pontos, foco=foco,
+        )
+        components.html(mapa.get_root().render(), height=710, scrolling=False)
+        st.caption(
+            f"{geometrias} regiões do mapa original visíveis. As cores representam: {modo.lower()}. "
+            "Opacidade entre 45% (menos votos válidos) e 75% (mais votos válidos). "
+            "Clique nos pontos para consultar o top 5 e os votos por local."
+        )
+        sem_poligono = locais_recorte - geometrias
+        if sem_poligono > 0:
+            st.info(
+                f"{sem_poligono} local(is) selecionado(s) não possui(em) polígono no HTML original "
+                "(coordenadas fora da área municipal). Seus votos continuam incluídos nos indicadores, "
+                "gráficos e tabela."
+            )
+        camada = obter_geometria(turno)
+        feicoes = [f for f in camada["features"] if f["properties"]["LOCAL_ID"] in selecionados]
+        st.download_button(
+            "Exportar GeoJSON filtrado",
+            json.dumps({"type": "FeatureCollection", "features": feicoes}, ensure_ascii=False),
+            file_name=f"voronoi_filtrado_turno_{turno}.geojson", mime="application/geo+json",
+        )
+    except (OSError, ValueError, KeyError) as erro:
+        st.error(f"Falha ao carregar o mapa original: {erro}")
 
-aba_locais, aba_sobre = st.tabs(["🏫 Locais de votação", "ℹ️ Sobre"])
+with aba_ranking:
+    st.subheader("Distribuição dos votos válidos por candidato")
+    st.caption("Participação calculada somente nos locais selecionados no filtro lateral.")
+    st.plotly_chart(ranking(recorte, candidatos, turno), width="stretch")
+    st.download_button(
+        "Exportar totais por candidato (CSV)",
+        pd.DataFrame({"Candidato": [rotulo(c) for c in candidatos], "Votos": [contagem[c] for c in candidatos]})
+        .sort_values("Votos", ascending=False).to_csv(index=False).encode("utf-8-sig"),
+        file_name=f"ranking_turno_{turno}.csv", mime="text/csv",
+    )
 
-with aba_locais:
-    tab = res.reset_index(drop=True)[["LOCAL", "SECOES", "VALIDOS", "BRANCO_NULO", "LIDER", "PCT_LIDER"]].copy()
-    tab["LIDER"] = tab.LIDER.map(rotulo)
-    tab.columns = ["Local", "Seções", "Votos válidos", "Brancos/nulos", "Líder", "% do líder"]
-    busca = st.text_input("Buscar local")
-    if busca:
-        tab = tab[tab.Local.str.contains(busca, case=False, na=False)]
-    st.dataframe(tab.sort_values("Votos válidos", ascending=False), width="stretch", hide_index=True,
-                 column_config={"% do líder": st.column_config.NumberColumn(format="%.1f%%")})
-    st.download_button("Baixar CSV", tab.to_csv(index=False).encode("utf-8"), f"locais_{turno}turno.csv", "text/csv")
+with aba_local:
+    c1, c2 = st.columns([3, 1])
+    c1.subheader(f"Participação de {rotulo(a)} por local")
+    qtd_local = c2.select_slider("Mostrar até", options=[10, 15, 20, 30, 50], value=20, key="topn_local")
+    st.plotly_chart(distribuicao(recorte, a, turno, qtd_local), width="stretch")
+    st.caption("Ordenação pela participação percentual do candidato A, e não pelo número absoluto de votos.")
+
+with aba_margem:
+    c1, c2 = st.columns([3, 1])
+    c1.subheader(f"Diferença entre {rotulo(a)} e {rotulo(b)}")
+    qtd_margem = c2.select_slider("Mostrar até", options=[10, 15, 20, 30, 50], value=20, key="topn_margem")
+    st.plotly_chart(margem(recorte, a, b, turno, qtd_margem), width="stretch")
+    st.caption("Diferença em pontos percentuais (A − B); valores negativos favorecem o candidato B. "
+               "São exibidos os locais com as maiores diferenças absolutas.")
+
+with aba_turnos:
+    st.subheader("Comparação dos dois turnos")
+    st.caption(
+        "Compara os votos dos candidatos A e B somente nos mesmos endereços/localizações "
+        "que passaram pelos filtros no turno atual. Não representa todos os locais do município "
+        "quando há filtros ativos."
+    )
+    st.plotly_chart(evolucao(locais, selecionados, a, b), width="stretch")
+    subtabela = locais.loc[locais.LOCAL_ID.isin(selecionados)].groupby("NR_TURNO").agg(
+        locais=("LOCAL_ID", "nunique"), validos=("VALIDOS", "sum")
+    ).reset_index()
+    subtabela.columns = ["Turno", "Locais presentes", "Votos válidos"]
+    st.dataframe(subtabela, width="stretch", hide_index=True)
+
+with aba_tabela:
+    st.subheader("Resultados por local de votação")
+    exibir_candidatos = st.toggle("Exibir votos de todos os candidatos", value=False)
+    colunas = [
+        "LOCAL", "ENDERECO", "SECOES", "VALIDOS", "BRANCOS", "NULOS", "VENCEDOR", "PCT_VENCEDOR",
+        "MARGEM_PP", a, b,
+    ]
+    if exibir_candidatos:
+        colunas.extend(candidatos)
+    colunas = list(dict.fromkeys(colunas))
+    tabela = recorte[colunas].copy().sort_values("VALIDOS", ascending=False)
+    nomes: dict[str | int, str] = {
+        "LOCAL": "Local", "ENDERECO": "Endereço", "SECOES": "Seções",
+        "VALIDOS": "Votos válidos", "BRANCOS": "Brancos", "NULOS": "Nulos",
+        "VENCEDOR": "Candidato vencedor", "PCT_VENCEDOR": "% do vencedor", "MARGEM_PP": "Margem top 2 (p.p.)",
+    }
+    nomes.update({c: f"Votos: {rotulo(c)}" for c in candidatos})
+    tabela["VENCEDOR"] = tabela.VENCEDOR.map(rotulo)
+    tabela = tabela.rename(columns=nomes)
+    st.dataframe(
+        tabela, width="stretch", height=570, hide_index=True,
+        column_config={
+            "% do vencedor": st.column_config.NumberColumn(format="%.1f%%"),
+            "Margem top 2 (p.p.)": st.column_config.NumberColumn(format="%.1f"),
+        },
+    )
+    st.download_button(
+        "Baixar tabela filtrada (CSV)",
+        tabela.to_csv(index=False).encode("utf-8-sig"),
+        file_name=f"locais_filtrados_turno_{turno}.csv", mime="text/csv",
+    )
 
 with aba_sobre:
-    st.markdown(
-        """
-**Fonte:** resultados por seção eleitoral do TSE (dados abertos), filtrados para São João del-Rei e
-agregados por local de votação (endereço). Os endereços foram geocodificados com Nominatim/OpenStreetMap
-e corrigidos manualmente quando necessário.
+    st.subheader("Fontes, método e interpretação")
+    st.markdown("""
+**Fontes de dados.** Resultados agregados por local e coordenadas disponibilizados com o projeto.
+O painel não faz consultas externas para obter os votos. O mapa base e os limites municipais
+foram extraídos do arquivo `sjdr_election_map.html` fornecido no projeto.
 
-**Método**
-- Porcentagens e líder usam **votos válidos** (excluem brancos e nulos, códigos 95 e 96 do TSE).
-- O mapa usa círculos graduados por local de votação, já que os dados não possuem polígonos por seção.
-- Locais sem coordenadas ficam fora do mapa, mas entram nos totais do município.
+**Geometrias originais.** Os polígonos são os do mapa original de Voronoi, extraídos uma única vez,
+sem realizar novo cálculo de Voronoi no dashboard. Eles indicam proximidade ao local de votação,
+**não** equivalem a distritos eleitorais oficiais, bairros ou limites de seções.
 
-**Limitações:** a unidade espacial é o local de votação, que pode reunir várias seções;
-a leitura espacial é aproximada, pois cada ponto representa o endereço do local.
-"""
-    )
+**Filtros sincronizados.** Turno, vencedor, busca por local, votos válidos mínimos, força mínima do
+vencedor e participação mínima do candidato A afetam mapa, indicadores, ranking, gráficos e tabela.
+O gráfico de comparação usa os mesmos locais filtrados em ambos os turnos.
+
+**Cores.** A visualização “Líder por local” conserva a cor já codificada no mapa original.
+Os demais modos reinterpretam somente o preenchimento: força do candidato A,
+diferença de participação A − B ou volume de votos válidos. A opacidade varia de **45% a 75%**,
+proporcional ao volume relativo de votos válidos do local no turno.
+
+**Cobertura.** Os totais municipais incluem registros sem coordenadas. Locais com coordenadas
+fora do limite municipal podem ter votos, mas não possuem um polígono no mapa de origem.
+O dashboard exibe avisos e mantém esses votos nos indicadores dos locais selecionados.
+
+**Limites analíticos.** Dados agregados por local não permitem concluir como votou cada indivíduo.
+Qualquer interpretação espacial requer cautela porque as áreas do Voronoi são aproximações geométricas.
+""")
+    st.code("python -m streamlit run dash/app.py", language="powershell")

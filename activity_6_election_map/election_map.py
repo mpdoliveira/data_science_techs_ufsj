@@ -231,7 +231,7 @@ def gerar_poligonos(dados_turno):
             "TOTAL": int(local["TOTAL_VOTOS"]),
             "PERCENTUAL": f"{forca * 100:.1f}%",
             "COR": cor_por_votos(candidato, forca),
-            "OPACIDADE": 0.25 + 0.75 * (
+            "OPACIDADE": 0.45 + 0.30 * (
                 int(local["TOTAL_VOTOS"]) / max_votos
             ),
         })
@@ -512,7 +512,7 @@ painel_html = f"""
             border-radius: 4px;
             background: linear-gradient(
                 to right,
-                rgba(100, 100, 100, 0.25),
+                rgba(100, 100, 100, 0.45),
                 rgba(100, 100, 100, 0.75)
             );
         "></div>
@@ -523,7 +523,7 @@ painel_html = f"""
             gap: 8px;
             font-size: 10px;
         ">
-            <span>Menos votos (25%)</span>
+            <span>Menos votos (45%)</span>
             <span>Mais votos (75%)</span>
         </div>
     </div>
